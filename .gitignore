@@ -1,0 +1,5 @@
+﻿# Local-only files — never commit
+events.v1.0.json
+*.bak
+.DS_Store
+Thumbs.db
