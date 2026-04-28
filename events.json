@@ -17294,10 +17294,15 @@
       "year": 2026,
       "tithi": "Chaitra sud 9",
       "td": null,
-      "location": null,
-      "desc": "",
-      "gurus": [],
-      "types": [],
+      "location": "New Delhi, India",
+      "desc": "Tapomurti Shri Nilkanth Varni murti-pratishtha by Mahant Swami Maharaj at Swaminarayan Akshardham, New Delhi",
+      "gurus": [
+        "Bhagwan Swaminarayan",
+        "Mahant Swami Maharaj"
+      ],
+      "types": [
+        "Mandir"
+      ],
       "sensitive": false,
       "media": {
         "photos": [
@@ -17339,7 +17344,8 @@
         ]
       },
       "post_date": "2026-03-26",
-      "tg_source": "Today in BAPS History"
+      "tg_source": "Today in BAPS History",
+      "date_type": "both"
     },
     {
       "id": "evt-pdf-1777124116345-0",
@@ -18748,8 +18754,10 @@
         "ashadhi_samvat": null
       },
       "location": "",
-      "desc": "📎 Bypass Timeline & Prasangs",
-      "gurus": [],
+      "desc": "📎 Bypass Timeline & Prasangs\nMSM Bypass\n",
+      "gurus": [
+        "Mahant Swami Maharaj"
+      ],
       "types": [],
       "sensitive": false,
       "tg_id": 7162,
@@ -18761,7 +18769,8 @@
         "pdf": [],
         "links": []
       },
-      "tg_source": "Today in BAPS History"
+      "tg_source": "Today in BAPS History",
+      "date_type": "both"
     },
     {
       "id": "evt-sa-1777268883126-0",
@@ -55691,6 +55700,19 @@
         "pdf": [],
         "links": []
       }
+    }
+  ],
+  "threads": [
+    {
+      "id": "thr-1777301771172",
+      "title": "1984",
+      "description": "1984",
+      "eventIds": [
+        "evt-sa-1777268883127-52",
+        "evt-sa-1777268883127-53",
+        "evt-sa-1777268883127-59",
+        "evt-sa-1777268883127-64"
+      ]
     }
   ]
 }

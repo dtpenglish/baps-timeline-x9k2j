@@ -237,7 +237,7 @@ nav {
 .cal-divider {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: center;o
   padding: 0 12px;
   color: var(--gold-dim);
   font-size: 20px;
@@ -1609,13 +1609,6 @@ nav {
 </style>
 <!-- SheetJS for xlsx read/write -->
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-<!-- PWA-PATCH-v1 -->
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#5C1A1A">
-<link rel="apple-touch-icon" href="icons/icon-180.png">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="BAPS Timeline">
 </head>
 <body>
 <datalist id="known-locations"></datalist>
@@ -2411,7 +2404,10 @@ nav {
           <input type="text" id="loc-filter" oninput="renderLocationsList()" placeholder="Filter by name / country / region…" style="background:var(--cream-dark);border:1px solid var(--border-strong);color:var(--text-dark);font-family:'Lato',sans-serif;font-size:13px;height:32px;padding:0 10px;border-radius:2px;flex:1;min-width:240px;">
           <button class="save-btn" onclick="locShowAddForm()">+ Add place</button>
           <button class="save-btn" onclick="locShowAddAliasForm()">+ Add alias</button>
-          <button class="save-btn" style="background:linear-gradient(135deg,var(--gold-dim),var(--gold));color:var(--maroon-deep);" onclick="exportLocationsJson()" title="Download the current list as locations.json. Drop it at the project root and reload — the site will load it instead of the in-code defaults.">⬇ Export locations.json</button>
+          <button class="save-btn" style="background:linear-gradient(135deg,var(--gold-dim),var(--gold));color:var(--maroon-deep);" onclick="saveLocationsToDisk()" title="Write directly to locations.json on disk. First click asks once; after that it's instant.">💾 Save locations.json to disk</button>
+          <button class="save-btn" style="background:transparent;color:var(--maroon-deep);border:1px solid var(--border-strong);padding:6px 10px;font-size:11px;min-width:auto;" onclick="resetFsaHandle('locations.json', 'fsa-locations-status')" title="Forget the linked file. Next save will prompt you to pick a file again.">↻ Re-link</button>
+          <span id="fsa-locations-status" style="font-size:12px;color:var(--text-muted);"></span>
+          <button class="save-btn" style="background:transparent;color:var(--maroon-deep);border:1px solid var(--border-strong);" onclick="exportLocationsJson()" title="Download a copy to Downloads folder">⬇ Export (downloads copy)</button>
         </div>
         <div id="loc-add-form" style="display:none;background:var(--cream-dark);border:1px solid var(--border-strong);border-radius:3px;padding:12px;margin-bottom:14px;"></div>
         <div id="loc-summary" style="font-size:13px;color:var(--text-muted);margin-bottom:8px;"></div>
@@ -2526,10 +2522,18 @@ nav {
 
       <!-- Export -->
       <div id="admin-tab-export" class="admin-tab-content">
-        <p style="font-size:14px;color:var(--text-muted);margin-bottom:20px;">Download the current event database for backup or editing.</p>
-        <div style="display:flex;gap:12px;flex-wrap:wrap;">
-          <button class="save-btn" onclick="exportJSON()">Export events.json</button>
-          <button class="save-btn" style="background:linear-gradient(135deg,var(--gold-dim),var(--gold));color:var(--maroon-deep);" onclick="exportCSV()">Export CSV</button>
+        <p style="font-size:14px;color:var(--text-muted);margin-bottom:14px;">Download the current event database for backup or editing.</p>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+          <button class="save-btn" style="background:linear-gradient(135deg,var(--gold-dim),var(--gold));color:var(--maroon-deep);" onclick="saveEventsToDisk()" title="Write directly to events.json on disk (no Downloads folder, no rename). First click asks you to point at events.json once; subsequent saves are instant.">💾 Save events.json to disk</button>
+          <button class="save-btn" style="background:transparent;color:var(--maroon-deep);border:1px solid var(--border-strong);padding:6px 10px;font-size:11px;min-width:auto;" onclick="resetFsaHandle('events.json', 'fsa-events-status')" title="Forget the linked file. Next save will prompt you to pick a file again.">↻ Re-link</button>
+          <span id="fsa-events-status" style="font-size:12px;color:var(--text-muted);"></span>
+        </div>
+        <p style="font-size:12px;color:var(--text-muted);margin:6px 0 18px;line-height:1.6;">
+          Replaces the manual download → rename step. First click pops a file picker; pick the existing <code>events.json</code> at the project root. After that, this button writes directly with no prompts. Works on Chromium-based browsers (Chrome/Edge) over <code>localhost</code>.
+        </p>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+          <button class="save-btn" onclick="exportJSON()" title="Download a dated copy to your Downloads folder (separate from the live events.json)">⬇ Export events.json (downloads copy)</button>
+          <button class="save-btn" style="background:transparent;color:var(--maroon-deep);border:1px solid var(--border-strong);" onclick="exportCSV()">Export CSV</button>
         </div>
         <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--border);">
           <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">Database Statistics</div>
@@ -2816,7 +2820,12 @@ function setLanguage(lang) {
   if (typeof renderCalendar === 'function' && currentPanel === 'calendar') renderCalendar();
   if (currentModal) openModal(currentModal.id);  // refresh modal in new language
 }
-let isAdmin = false;
+// Admin session: persisted in sessionStorage so it survives page reloads
+// (e.g. service-worker cache updates) but auto-clears on tab close.
+let isAdmin = (function() {
+  try { return sessionStorage.getItem('baps_admin_session') === '1'; }
+  catch (e) { return false; }
+})();
 let isPublic = true; // public mode hides sensitive
 let currentModal = null;
 let currentPanel = 'today';
@@ -3137,6 +3146,7 @@ function showPanel(name) {
   const btn = document.querySelector(`[data-panel="${name}"]`);
   if (btn) btn.classList.add('active');
   currentPanel = name;
+  try { sessionStorage.setItem('baps_current_panel', name); } catch (e) {}
 
   if (name === 'gurus') renderGuruPanel();
   if (name === 'gallery') renderGallery();
@@ -5114,6 +5124,7 @@ function checkLogin() {
   const pw = document.getElementById('admin-password').value;
   if (pw === ADMIN_PASS) {
     isAdmin = true;
+    try { sessionStorage.setItem('baps_admin_session', '1'); } catch (e) {}
     closeAdminLogin();
     showPanel('admin');
     renderStats();
@@ -5153,6 +5164,7 @@ function startAdminIdleTimer() {
 function adminLogout(autoTriggered) {
   if (!isAdmin) return;
   isAdmin = false;
+  try { sessionStorage.removeItem('baps_admin_session'); } catch (e) {}
   if (_adminIdleInterval) { clearInterval(_adminIdleInterval); _adminIdleInterval = null; }
   showPanel('today');
   renderManageList && renderManageList(1);
@@ -7340,6 +7352,189 @@ function changePassword() {
   document.getElementById('pw-confirm').value = '';
 }
 
+// ── File System Access API: direct save to disk ──────
+// First-time use: prompts for a file. Permission persists across reloads
+// (handle stored in IndexedDB). Subsequent saves are silent.
+
+function _fsaSupported() {
+  return typeof window.showSaveFilePicker === 'function';
+}
+
+const FSA_DB_NAME  = 'baps-fsa';
+const FSA_DB_STORE = 'handles';
+
+function _fsaOpenDb() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(FSA_DB_NAME, 1);
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(FSA_DB_STORE)) db.createObjectStore(FSA_DB_STORE);
+    };
+    req.onsuccess = e => resolve(e.target.result);
+    req.onerror   = e => reject(e.target.error);
+  });
+}
+
+async function _fsaPutHandle(key, handle) {
+  const db = await _fsaOpenDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(FSA_DB_STORE, 'readwrite');
+    tx.objectStore(FSA_DB_STORE).put(handle, key);
+    tx.oncomplete = () => resolve();
+    tx.onerror    = () => reject(tx.error);
+  });
+}
+
+async function _fsaGetHandle(key) {
+  const db = await _fsaOpenDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(FSA_DB_STORE, 'readonly');
+    const r  = tx.objectStore(FSA_DB_STORE).get(key);
+    r.onsuccess = () => resolve(r.result || null);
+    r.onerror   = () => reject(r.error);
+  });
+}
+
+async function _fsaEnsurePermission(handle) {
+  const opts = { mode: 'readwrite' };
+  if (await handle.queryPermission(opts)   === 'granted') return true;
+  if (await handle.requestPermission(opts) === 'granted') return true;
+  return false;
+}
+
+async function _fsaDeleteHandle(key) {
+  const db = await _fsaOpenDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(FSA_DB_STORE, 'readwrite');
+    tx.objectStore(FSA_DB_STORE).delete(key);
+    tx.oncomplete = () => resolve();
+    tx.onerror    = () => reject(tx.error);
+  });
+}
+
+async function resetFsaHandle(key, statusElId) {
+  try {
+    await _fsaDeleteHandle(key);
+    const el = document.getElementById(statusElId);
+    if (el) {
+      el.textContent = 'Re-link cleared. Next save will pick the file.';
+      el.style.color = 'var(--text-muted)';
+    }
+  } catch (e) {
+    alert('Failed to reset handle: ' + (e.message || e));
+  }
+}
+
+async function _fsaPickFile(suggestedName) {
+  // showSaveFilePicker handles BOTH cases: creating a new file (if it
+  // doesn't exist yet) and overwriting an existing file (with the browser's
+  // own "replace existing?" confirmation). Always read-write.
+  return await window.showSaveFilePicker({
+    suggestedName,
+    types: [{ description: 'JSON file', accept: { 'application/json': ['.json'] } }]
+  });
+}
+
+async function _fsaWrite(handle, content) {
+  const writable = await handle.createWritable();
+  await writable.write(content);
+  await writable.close();
+}
+
+async function _fsaSaveJson(key, suggestedName, getContent, statusElId) {
+  const status = document.getElementById(statusElId);
+  const setStatus = (txt, color) => {
+    if (!status) return;
+    status.textContent = txt;
+    status.style.color = color || 'var(--text-muted)';
+  };
+
+  if (!_fsaSupported()) {
+    setStatus('✕ Browser does not support direct save (use Chrome / Edge).', '#a33');
+    alert('Direct save needs Chrome or Edge over http://localhost. Use the Export button instead.');
+    return false;
+  }
+
+  let handle = null;
+  try {
+    handle = await _fsaGetHandle(key);
+    if (handle) {
+      const ok = await _fsaEnsurePermission(handle);
+      if (!ok) {
+        setStatus('Permission needed -- pick again', '#a60');
+        handle = null;
+      }
+    }
+    if (!handle) {
+      setStatus('Pick file...');
+      handle = await _fsaPickFile(suggestedName);
+      if (!(await _fsaEnsurePermission(handle))) {
+        setStatus('✕ Permission denied', '#a33');
+        return false;
+      }
+      await _fsaPutHandle(key, handle);
+      setStatus('File linked.');
+    }
+
+    setStatus('Saving...');
+    const content = getContent();
+    await _fsaWrite(handle, content);
+    const t = new Date().toLocaleTimeString();
+    setStatus(`✓ Saved ${suggestedName} at ${t}`, '#0a7');
+    return true;
+  } catch (e) {
+    if (e.name === 'AbortError') {
+      setStatus('Cancelled.');
+    } else {
+      setStatus(`✕ ${e.message || e}`, '#a33');
+      console.error(e);
+    }
+    return false;
+  }
+}
+
+async function saveEventsToDisk() {
+  const payload = {
+    categories: typeof EVENT_CATEGORIES !== 'undefined' ? EVENT_CATEGORIES : [],
+    events: events,
+    threads: window._THREADS || []
+  };
+  const content = JSON.stringify(payload, null, 2);
+  const ok = await _fsaSaveJson('events.json', 'events.json', () => content, 'fsa-events-status');
+  if (ok) _audit('save-events-to-disk', `${events.length} events`);
+}
+
+async function saveLocationsToDisk() {
+  const titled = k => k.replace(/\b\w/g, c => c.toUpperCase());
+  const places = Object.keys(_MAP_LOCATIONS).sort().map(name => {
+    const meta = _locMeta(name);
+    return { name, lat: _MAP_LOCATIONS[name][0], lng: _MAP_LOCATIONS[name][1], country: meta.country, region: meta.region };
+  });
+  const aliases = Object.entries(_LOCATION_ALIASES).sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([alias, canonical]) => ({ alias, canonical }));
+  const content = JSON.stringify({ places, aliases }, null, 2);
+  const ok = await _fsaSaveJson('locations.json', 'locations.json', () => content, 'fsa-locations-status');
+  if (ok) _audit('save-locations-to-disk', `${places.length} places, ${aliases.length} aliases`);
+}
+
+// On page load, populate the status pills with current handle state.
+async function _fsaInitStatus() {
+  if (!_fsaSupported()) return;
+  for (const [key, elId, label] of [
+    ['events.json',    'fsa-events-status',    'events.json'],
+    ['locations.json', 'fsa-locations-status', 'locations.json']
+  ]) {
+    const el = document.getElementById(elId);
+    if (!el) continue;
+    try {
+      const h = await _fsaGetHandle(key);
+      if (h) el.textContent = `Linked to disk - first save will confirm permission.`;
+      else   el.textContent = `Not linked yet (first save will pick the file).`;
+    } catch (e) { /* ignore */ }
+  }
+}
+setTimeout(_fsaInitStatus, 800);
+
 function exportJSON() {
   const payload = {
     categories: EVENT_CATEGORIES,
@@ -7798,7 +7993,7 @@ document.addEventListener('keydown', e => {
 // ═══════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════
-fetch('events.json?v=' + Date.now())
+fetch('events.json')
   .then(r => r.json())
   .then(data => {
     if (Array.isArray(data)) {
@@ -7820,7 +8015,20 @@ fetch('events.json?v=' + Date.now())
     // Reflect the saved language on the toggle dropdown.
     const lt = document.getElementById('lang-toggle');
     if (lt) lt.value = currentLang;
+    // If admin session was preserved from a previous reload, start the idle timer.
+    if (isAdmin && typeof startAdminIdleTimer === 'function') startAdminIdleTimer();
     renderToday();
+    // Restore panel from sessionStorage so a Live Server / SW reload doesn't snap us back to Today.
+    try {
+      const savedPanel = sessionStorage.getItem('baps_current_panel');
+      if (savedPanel && savedPanel !== 'today' && document.getElementById('panel-' + savedPanel)) {
+        // Defer slightly so admin password gate / data loaders can finish.
+        setTimeout(() => {
+          if (savedPanel === 'admin' && !isAdmin) return; // don't auto-open admin if not logged in
+          showPanel(savedPanel);
+        }, 50);
+      }
+    } catch (e) {}
     setTimeout(() => renderGuruPanel(), 500);
     // Try to load locations.json if present; falls back silently to in-code defaults.
     _loadLocationsJson().finally(buildLocationDatalist);
@@ -8811,16 +9019,6 @@ window.addEventListener('hashchange', () => {
     }
   }
 });
-</script>
-<!-- PWA-PATCH-v1 -->
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('service-worker.js')
-      .then(reg => console.log('SW registered:', reg.scope))
-      .catch(err => console.log('SW registration failed:', err));
-  });
-}
 </script>
 </body>
 </html>
