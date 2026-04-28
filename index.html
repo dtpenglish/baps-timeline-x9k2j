@@ -8004,13 +8004,17 @@ fetch('events.json')
       EVENTS_DATA = data.events || [];
       events = data.events || [];
       initCategories(data.categories);
-      // Threads: prefer localStorage (recent edits) over events.json (last export).
-      // If localStorage is empty, fall back to whatever was bundled with events.json.
-      const local = (Array.isArray(window._THREADS) && window._THREADS.length) ? window._THREADS : null;
-      if (!local && Array.isArray(data.threads)) {
-        window._THREADS = data.threads;
-        _saveThreadsLocal();
-      }
+      // Threads merge: published events.json is canonical. localStorage is
+      // only used to preserve LOCAL-ONLY threads that haven't been published
+      // yet (admin authoring buffer). For threads that exist in both, the
+      // published version always wins -- this avoids stale-localStorage
+      // overriding fresh published content for reviewers.
+      const remoteThreads = Array.isArray(data.threads) ? data.threads : [];
+      const localThreads  = Array.isArray(window._THREADS) ? window._THREADS : [];
+      const remoteIds = new Set(remoteThreads.map(t => t.id));
+      const unpublishedLocal = localThreads.filter(t => t && t.id && !remoteIds.has(t.id));
+      window._THREADS = [...remoteThreads, ...unpublishedLocal];
+      _saveThreadsLocal();
     }
     // Reflect the saved language on the toggle dropdown.
     const lt = document.getElementById('lang-toggle');
