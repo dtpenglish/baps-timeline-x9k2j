@@ -8246,22 +8246,31 @@ function thrEdit(id) {
   thrEditForm(t);
 }
 
+// In-memory state for the thread editor (replaces the old textarea).
+let _thrFormIds = [];
+
 function thrEditForm(t) {
+  _thrFormIds = (t.eventIds || []).slice();
   const f = document.getElementById('thr-create-form');
   const isEdit = !!t.id;
   f.innerHTML = `
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;font-weight:600;">${isEdit ? '✎ Edit thread' : '+ New thread'}</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
       <div><label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:2px;">Title *</label><input id="thr-f-title" type="text" value="${(t.title || '').replace(/"/g, '&quot;')}" placeholder="e.g. Mahant Swami's UK Vicharan 2024" style="width:100%;padding:6px 8px;border:1px solid var(--border-strong);border-radius:3px;background:var(--cream);font-size:13px;"></div>
       <div><label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:2px;">Short description</label><input id="thr-f-desc" type="text" value="${(t.description || '').replace(/"/g, '&quot;')}" placeholder="One-line summary" style="width:100%;padding:6px 8px;border:1px solid var(--border-strong);border-radius:3px;background:var(--cream);font-size:13px;"></div>
     </div>
-    <div style="margin-bottom:8px;">
-      <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:2px;">Events in order (one event id per line; use Manage Events to find ids)</label>
-      <textarea id="thr-f-events" rows="6" placeholder="evt-1234\nevt-5678" style="width:100%;padding:6px 8px;border:1px solid var(--border-strong);border-radius:3px;background:var(--cream);font-family:monospace;font-size:12px;resize:vertical;">${(t.eventIds || []).join('\n')}</textarea>
-      <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Tip: keyword-search → click event card → copy id from the URL after <code>#event=</code>, or use the picker below.</div>
+
+    <div style="margin-bottom:14px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
+        <strong style="font-size:12px;color:var(--maroon-deep);">Events in this thread <span id="thr-f-list-count" style="color:var(--gold-dim);font-weight:500;"></span></strong>
+        <button class="save-btn" style="padding:3px 10px;font-size:11px;min-width:auto;background:transparent;color:var(--maroon-deep);border:1px solid var(--border-strong);" onclick="thrSortByDate('asc')" title="Reorder events by their event-date, oldest first">↑ Sort oldest first</button>
+        <button class="save-btn" style="padding:3px 10px;font-size:11px;min-width:auto;background:transparent;color:var(--maroon-deep);border:1px solid var(--border-strong);" onclick="thrSortByDate('desc')" title="Reorder events by their event-date, newest first">↓ Sort newest first</button>
+      </div>
+      <div id="thr-f-list" style="border:1px solid var(--border);border-radius:3px;background:var(--cream);min-height:60px;max-height:300px;overflow-y:auto;"></div>
     </div>
+
     <div style="margin-bottom:10px;">
-      <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:2px;">Quick add: search and append</label>
+      <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:2px;">Quick add: search and append (results in chronological order)</label>
       <div style="display:flex;gap:6px;align-items:center;">
         <input id="thr-f-search" type="text" oninput="thrSearchPick()" placeholder="Type to search descriptions / dates / locations" style="flex:1;padding:6px 8px;border:1px solid var(--border-strong);border-radius:3px;background:var(--cream);font-size:13px;">
         <button class="save-btn" style="padding:6px 12px;background:transparent;color:var(--maroon-deep);border:1px solid var(--border-strong);" onclick="thrResetSearch()" title="Clear search">↻ Reset</button>
@@ -8275,10 +8284,84 @@ function thrEditForm(t) {
     </div>`;
   f.style.display = 'block';
   document.getElementById('thr-f-title').focus();
+  _thrRenderList();
+}
+
+function _thrRenderList() {
+  const target = document.getElementById('thr-f-list');
+  const cnt = document.getElementById('thr-f-list-count');
+  if (!target) return;
+  if (cnt) cnt.textContent = _thrFormIds.length ? `(${_thrFormIds.length} event${_thrFormIds.length === 1 ? '' : 's'})` : '';
+  if (!_thrFormIds.length) {
+    target.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:12px;">No events yet. Use the search below to add some.</div>';
+    return;
+  }
+  target.innerHTML = _thrFormIds.map((id, idx) => {
+    const e = events.find(x => x.id === id);
+    if (!e) {
+      return `<div style="display:flex;gap:8px;align-items:center;padding:6px 10px;border-bottom:1px solid var(--border);background:rgba(160,40,40,0.06);">
+        <span style="font-family:'Cinzel',serif;color:var(--text-muted);font-size:11px;width:28px;text-align:center;">${idx + 1}.</span>
+        <span style="flex:1;font-size:12px;color:#a33;">[missing] ${id}</span>
+        <button class="save-btn" style="padding:3px 8px;font-size:11px;min-width:auto;background:transparent;border:1px solid #a33;color:#a33;" onclick="thrRemoveAt(${idx})" title="Remove">✕</button>
+      </div>`;
+    }
+    const photo = (e.media?.photos || [])[0];
+    const thumb = photo
+      ? `<img src="${photo}" alt="" loading="lazy" style="width:36px;height:36px;object-fit:cover;border-radius:3px;flex-shrink:0;border:1px solid var(--border);" onerror="this.style.display='none'">`
+      : `<div style="width:36px;height:36px;background:var(--maroon-dark);border-radius:3px;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--gold-dim);font-size:12px;border:1px solid var(--border);">✦</div>`;
+    const desc = (getDesc(e) || '').replace(/</g, '&lt;').slice(0, 80);
+    const isFirst = idx === 0;
+    const isLast  = idx === _thrFormIds.length - 1;
+    return `<div style="display:flex;gap:8px;align-items:center;padding:6px 10px;border-bottom:1px solid var(--border);">
+      <span style="font-family:'Cinzel',serif;color:var(--gold-dim);font-size:12px;font-weight:600;width:28px;text-align:center;">${idx + 1}.</span>
+      ${thumb}
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:11px;color:var(--maroon-deep);font-weight:600;">${e.date || '?'}</div>
+        <div style="font-size:12px;color:var(--text-body);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.3;">${desc}</div>
+      </div>
+      <div style="display:flex;gap:3px;flex-shrink:0;">
+        <button class="save-btn" style="padding:3px 7px;font-size:11px;min-width:auto;background:transparent;color:var(--maroon-deep);border:1px solid var(--border-strong);" onclick="event.preventDefault();openModal('${e.id}')" title="Preview">👁</button>
+        <button class="save-btn" style="padding:3px 7px;font-size:11px;min-width:auto;background:transparent;color:var(--maroon-deep);border:1px solid var(--border-strong);${isFirst?'opacity:0.3;pointer-events:none;':''}" onclick="thrMoveUp(${idx})" title="Move up">↑</button>
+        <button class="save-btn" style="padding:3px 7px;font-size:11px;min-width:auto;background:transparent;color:var(--maroon-deep);border:1px solid var(--border-strong);${isLast?'opacity:0.3;pointer-events:none;':''}" onclick="thrMoveDown(${idx})" title="Move down">↓</button>
+        <button class="save-btn" style="padding:3px 7px;font-size:11px;min-width:auto;background:transparent;color:#a33;border:1px solid #a33;" onclick="thrRemoveAt(${idx})" title="Remove from thread">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function thrMoveUp(idx) {
+  if (idx <= 0 || idx >= _thrFormIds.length) return;
+  [_thrFormIds[idx - 1], _thrFormIds[idx]] = [_thrFormIds[idx], _thrFormIds[idx - 1]];
+  _thrRenderList();
+}
+
+function thrMoveDown(idx) {
+  if (idx < 0 || idx >= _thrFormIds.length - 1) return;
+  [_thrFormIds[idx], _thrFormIds[idx + 1]] = [_thrFormIds[idx + 1], _thrFormIds[idx]];
+  _thrRenderList();
+}
+
+function thrRemoveAt(idx) {
+  if (idx < 0 || idx >= _thrFormIds.length) return;
+  _thrFormIds.splice(idx, 1);
+  _thrRenderList();
+  thrSearchPick();
+}
+
+function thrSortByDate(direction) {
+  const dir = direction === 'desc' ? -1 : 1;
+  _thrFormIds.sort((aId, bId) => {
+    const ea = events.find(e => e.id === aId);
+    const eb = events.find(e => e.id === bId);
+    const da = (ea && ea.date) || '';
+    const db = (eb && eb.date) || '';
+    return dir * da.localeCompare(db);
+  });
+  _thrRenderList();
 }
 
 function _thrCurrentIds() {
-  return new Set(document.getElementById('thr-f-events').value.split(/\s*\n\s*/).map(s => s.trim()).filter(Boolean));
+  return new Set(_thrFormIds);
 }
 
 function thrSearchPick() {
@@ -8286,7 +8369,10 @@ function thrSearchPick() {
   const p = document.getElementById('thr-f-picker');
   const cnt = document.getElementById('thr-f-count');
   if (!q || q.length < 2) { p.style.display = 'none'; cnt.textContent = ''; return; }
-  const all = events.filter(e => `${e.date || ''} ${getDesc(e)} ${e.location || ''}`.toLowerCase().includes(q));
+  // Sort matches chronologically (oldest first) so the picker reads top-to-bottom in time order.
+  const all = events
+    .filter(e => `${e.date || ''} ${getDesc(e)} ${e.location || ''}`.toLowerCase().includes(q))
+    .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
   cnt.textContent = `${all.length} match${all.length === 1 ? '' : 'es'}`;
   if (!all.length) {
     p.style.display = 'block';
@@ -8331,14 +8417,10 @@ function thrSearchPick() {
 }
 
 function thrToggleId(id) {
-  const ta = document.getElementById('thr-f-events');
-  const ids = ta.value.split(/\s*\n\s*/).map(s => s.trim()).filter(Boolean);
-  const idx = ids.indexOf(id);
-  if (idx >= 0) ids.splice(idx, 1);
-  else          ids.push(id);
-  ta.value = ids.join('\n');
-  // Re-render the picker so the row's "+ Add" / "✓ In thread" state updates,
-  // but DON'T touch the search term — user keeps browsing the same results.
+  const idx = _thrFormIds.indexOf(id);
+  if (idx >= 0) _thrFormIds.splice(idx, 1);
+  else          _thrFormIds.push(id);
+  _thrRenderList();
   thrSearchPick();
 }
 
@@ -8354,10 +8436,9 @@ function thrResetSearch() {
 function thrSave(existingId) {
   const title = document.getElementById('thr-f-title').value.trim();
   const desc  = document.getElementById('thr-f-desc').value.trim();
-  const ids   = document.getElementById('thr-f-events').value.split(/\s*\n\s*/).map(s => s.trim()).filter(Boolean);
   if (!title) { alert('Title is required.'); return; }
-  // Filter to existing events.
-  const validIds = ids.filter(id => events.some(e => e.id === id));
+  // Use the live in-memory list. Filter to events that still exist.
+  const validIds = _thrFormIds.filter(id => events.some(e => e.id === id));
   const t = {
     id: existingId || `thr-${Date.now()}`,
     title, description: desc, eventIds: validIds
@@ -8465,7 +8546,7 @@ function renderThreadDetail(id) {
   const evs = (t.eventIds || []).map(eid => events.find(e => e.id === eid)).filter(Boolean).filter(e => !e.sensitive);
   detail.innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
-      <button class="save-btn" style="background:transparent;color:var(--maroon-deep);border:1px solid var(--border-strong);" onclick="renderStoriesList()">← All stories</button>
+      <button class="save-btn" style="background:transparent;color:var(--gold-light);border:1px solid var(--gold-dim);" onclick="renderStoriesList()">← All stories</button>
       <button class="save-btn" style="background:linear-gradient(135deg,var(--gold-dim),var(--gold));color:var(--maroon-deep);" onclick="shareThread('${t.id}')">🔗 Share this thread</button>
       <span id="thread-share-msg" style="font-size:12px;color:#0a7;"></span>
     </div>
