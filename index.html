@@ -1337,6 +1337,26 @@ nav {
   font-family: 'Cinzel', serif; font-size: 16px; font-weight: 600; z-index: 2010;
 }
 
+/* ── AI Review tab ── */
+.airev-card { border:1px solid var(--border-strong); background:var(--cream); padding:14px; margin-bottom:14px; border-radius:3px; }
+.airev-meta { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:8px; font-family:'Lato',sans-serif; }
+.airev-pane-label { font-size:10px; font-weight:700; letter-spacing:0.1em; color:var(--maroon-deep); margin:8px 0 4px; text-transform:uppercase; font-family:'Lato',sans-serif; }
+.airev-pane { background:#fff; border:1px solid var(--border); padding:9px 12px; font-size:13.5px; line-height:1.55; white-space:pre-wrap; color:var(--text-body); border-radius:2px; word-wrap:break-word; }
+.airev-pane.suggested { background:#f5fff7; }
+.airev-edit-textarea { width:100%; min-height:140px; box-sizing:border-box; font-family:'Lato',sans-serif; font-size:13.5px; line-height:1.55; padding:10px 12px; border:1px solid var(--border-strong); background:#fff8e6; color:var(--text-body); resize:vertical; border-radius:2px; }
+.airev-diff-add { background:#dcffe0; color:#065f1c; padding:0 2px; border-radius:2px; }
+.airev-diff-rem { background:#ffe1e1; color:#7d1010; text-decoration:line-through; padding:0 2px; border-radius:2px; }
+.airev-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+.airev-actions .airev-btn { padding:6px 14px; font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; border:1px solid var(--border-strong); cursor:pointer; border-radius:2px; font-family:'Lato',sans-serif; }
+.airev-btn-accept { background:#0a7d3c; color:#fff; border-color:#085a2b; }
+.airev-btn-reject { background:transparent; color:#a33; border-color:rgba(160,40,40,0.5); }
+.airev-btn-edit   { background:transparent; color:var(--maroon-deep); }
+.airev-btn-skip   { background:transparent; color:var(--text-muted); }
+.airev-actions .airev-btn:hover { opacity:0.85; }
+.airev-pager { display:flex; gap:8px; align-items:center; margin:14px 0; font-size:12px; color:var(--text-muted); }
+.airev-pager button { padding:5px 12px; font-size:11px; border:1px solid var(--border-strong); background:var(--cream-dark); color:var(--text-dark); cursor:pointer; border-radius:2px; font-family:'Lato',sans-serif; }
+.airev-pager button:disabled { opacity:0.4; cursor:default; }
+
 /* ── Admin panel ── */
 .admin-panel-content {
   background: var(--cream);
@@ -1911,14 +1931,16 @@ nav {
         <input type="text" id="ml-bulk" data-autocomplete="location" placeholder="Location to apply" style="background:var(--cream-dark);border:1px solid var(--border-strong);color:var(--text-dark);font-family:'Lato',sans-serif;font-size:12px;height:28px;padding:0 8px;border-radius:2px;width:220px;">
         <button class="save-btn" style="padding:4px 10px;font-size:11px;min-width:auto;" onclick="mlBulkApply()" title="Set this location on every event currently shown">✓ Apply to all visible</button>
       </label>
-      <span style="margin-left:auto;font-size:11px;color:var(--text-muted);">Tip: Click ✨ to accept the auto-suggestion.</span>
+      <span style="margin-left:auto;font-size:11px;color:var(--text-muted);">Tip: Rows tagged <span style="background:var(--gold);color:var(--maroon-deep);padding:0 4px;border-radius:2px;font-weight:700;font-size:10px;">SUGGESTED</span> have a guess pre-filled — click ✓ Apply to accept, or edit first.</span>
     </div>
     <hr style="border:none;border-bottom:1px solid var(--border);margin-bottom:12px;">
     <div id="ml-list" style="overflow-y:auto;flex:1;padding-right:4px;"></div>
     <hr style="border:none;border-top:1px solid var(--border);margin-top:12px;">
     <div style="display:flex;gap:12px;justify-content:space-between;align-items:center;margin-top:12px;flex-wrap:wrap;">
       <span id="ml-msg" style="font-size:13px;"></span>
-      <div style="display:flex;gap:8px;">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <span id="ml-dirty" style="font-size:12px;color:#a33;font-weight:600;display:none;"></span>
+        <button onclick="saveEventsToDiskFromModal('ml-dirty')" class="save-btn" style="background:linear-gradient(135deg,var(--gold-dim),var(--gold));color:var(--maroon-deep);" title="Persist all location updates to events.json on disk">💾 Save events.json to disk</button>
         <button onclick="closeMissingLocationsModal()" class="save-btn" style="background:transparent;color:var(--maroon-deep);border:1px solid var(--border-strong);">Close</button>
       </div>
     </div>
@@ -1938,9 +1960,40 @@ nav {
     <hr style="border:none;border-top:1px solid var(--border);margin-top:12px;">
     <div style="display:flex;gap:12px;justify-content:space-between;align-items:center;margin-top:12px;flex-wrap:wrap;">
       <span id="bl-msg" style="font-size:13px;"></span>
-      <div style="display:flex;gap:8px;">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <span id="bl-dirty" style="font-size:12px;color:#a33;font-weight:600;display:none;"></span>
+        <button onclick="saveEventsToDiskFromModal('bl-dirty')" class="save-btn" style="background:linear-gradient(135deg,var(--gold-dim),var(--gold));color:var(--maroon-deep);" title="Persist all location updates to events.json on disk">💾 Save events.json to disk</button>
         <button onclick="closeBadLocationsModal()" class="save-btn" style="background:transparent;color:var(--maroon-deep);border:1px solid var(--border-strong);">Close</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── CONSOLIDATION WIZARD MODAL ── -->
+<div id="loc-cons-modal" style="display:none;position:fixed;inset:0;background:rgba(20,5,5,0.85);z-index:3100;align-items:center;justify-content:center;backdrop-filter:blur(4px);" onclick="if(event.target===this)locCloseConsolidationWizard()">
+  <div style="background:var(--cream);padding:24px;border-radius:4px;border:1px solid var(--border-strong);max-width:1100px;width:calc(100% - 32px);max-height:92vh;display:flex;flex-direction:column;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <h3 style="font-family:'Cinzel',serif;color:var(--maroon-deep);margin:0;font-size:18px;">🪄 Suggest Consolidations</h3>
+      <button onclick="locCloseConsolidationWizard()" style="background:transparent;border:none;font-size:20px;color:var(--maroon-deep);cursor:pointer;">✕</button>
+    </div>
+    <p style="font-size:12px;color:var(--text-muted);margin:0 0 8px;line-height:1.6;">
+      Each non-canonical location string is fuzzy-matched against the master list. <strong style="color:#0a7d3c;">HIGH</strong> = near-identical (token overlap or 1-char typo). <strong style="color:#a60;">MEDIUM</strong> = strong but not certain. <strong style="color:var(--text-muted);">LOW</strong> = weak — review carefully. HIGH suggestions are pre-selected for one-click acceptance. Each accepted row renames the location string on every event that uses it.
+    </p>
+    <p id="loc-cons-summary" style="font-size:13px;color:var(--text-body);margin:0 0 10px;"></p>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
+      <input type="text" id="loc-cons-filter" oninput="locConsRender()" placeholder="Filter (e.g. 'london')…" style="background:var(--cream-dark);border:1px solid var(--border-strong);color:var(--text-dark);font-family:'Lato',sans-serif;font-size:12px;height:30px;padding:0 10px;border-radius:2px;flex:1;min-width:200px;">
+      <button class="save-btn" style="padding:5px 12px;font-size:11px;min-width:auto;background:linear-gradient(135deg,var(--gold-dim),var(--gold));color:var(--maroon-deep);" onclick="locConsToggleAll('high')">Select all HIGH</button>
+      <button class="save-btn" style="padding:5px 12px;font-size:11px;min-width:auto;" onclick="locConsToggleAll('medium')">Select all HIGH+MEDIUM</button>
+      <button class="save-btn" style="padding:5px 12px;font-size:11px;min-width:auto;background:transparent;color:var(--maroon-deep);border:1px solid var(--border-strong);" onclick="locConsToggleAll('all')">Select all</button>
+      <button class="save-btn" style="padding:5px 12px;font-size:11px;min-width:auto;background:transparent;color:var(--maroon-deep);border:1px solid var(--border-strong);" onclick="locConsToggleAll('none')">Clear selection</button>
+    </div>
+    <hr style="border:none;border-bottom:1px solid var(--border);margin-bottom:0;">
+    <div id="loc-cons-list" style="overflow-y:auto;flex:1;border:1px solid var(--border);border-top:none;background:var(--cream);"></div>
+    <hr style="border:none;border-top:1px solid var(--border);margin-top:0;margin-bottom:12px;">
+    <div style="display:flex;gap:12px;justify-content:flex-end;align-items:center;flex-wrap:wrap;">
+      <span id="loc-cons-status" style="margin-right:auto;font-size:13px;display:none;align-items:center;"></span>
+      <button onclick="locConsApplySelected()" class="save-btn" style="background:#0a7d3c;color:#fff;border:1px solid #085a2b;">✓ Apply selected</button>
+      <button onclick="locCloseConsolidationWizard()" class="save-btn" style="background:transparent;color:var(--maroon-deep);border:1px solid var(--border-strong);">Close</button>
     </div>
   </div>
 </div>
@@ -2083,6 +2136,7 @@ nav {
       <div class="admin-tabs">
         <button class="admin-tab active" onclick="switchAdminTab('add')">Add Event</button>
         <button class="admin-tab" onclick="switchAdminTab('manage')">Manage Events</button>
+        <button class="admin-tab" onclick="switchAdminTab('airev')">AI Review</button>
         <button class="admin-tab" onclick="switchAdminTab('analytics')">Analytics</button>
         <button class="admin-tab" onclick="switchAdminTab('categories')">Categories</button>
         <button class="admin-tab" onclick="switchAdminTab('bulk')">Bulk Import</button>
@@ -2325,6 +2379,32 @@ nav {
         <div class="pagination" data-pagination-target="manage"></div>
       </div>
 
+      <!-- AI Review -->
+      <div id="admin-tab-airev" class="admin-tab-content">
+        <p style="font-size:13px;color:var(--text-muted);margin:0 0 12px;line-height:1.6;">
+          Walk through copy-edit suggestions made by Gemini AI for event descriptions.
+          Run <code>gemini-review.ps1</code> from the project folder to populate this list, then accept, reject, or edit each suggestion.
+          When you're done, click <strong>Save events.json to disk</strong> to persist the accepted edits.
+        </p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px;">
+          <span id="airev-stats" style="font-size:12px;color:var(--text-body);"></span>
+          <span style="flex:1;"></span>
+          <select id="airev-filter" onchange="renderAiReview()" style="background:var(--cream-dark);border:1px solid var(--border-strong);color:var(--text-dark);font-size:12px;height:32px;padding:0 8px;border-radius:2px;cursor:pointer;">
+            <option value="all">All changes</option>
+            <option value="major">Major changes only</option>
+            <option value="trivial">Trivial only (punctuation/case)</option>
+          </select>
+          <button class="save-btn" style="padding:6px 12px;font-size:11px;min-width:auto;background:linear-gradient(135deg,var(--gold-dim),var(--gold));color:var(--maroon-deep);" onclick="aiReviewAcceptAllTrivial()" title="Accept all suggestions where the only difference is punctuation, capitalisation, or whitespace">✓ Accept all trivial</button>
+          <button class="save-btn" style="padding:6px 12px;font-size:11px;min-width:auto;color:#a33;border-color:rgba(160,40,40,0.4);background:transparent;" onclick="aiReviewClearAll()" title="Discard all pending suggestions (original descriptions remain unchanged)">✗ Discard all</button>
+          <button class="save-btn" style="padding:6px 12px;font-size:11px;min-width:auto;" onclick="saveEventsToDisk()" title="Persist accepted edits to events.json on disk">💾 Save events.json to disk</button>
+          <span id="airev-fsa-status" style="font-size:11px;color:var(--text-muted);"></span>
+        </div>
+        <div id="airev-empty-msg" style="display:none;font-size:13px;color:var(--text-muted);padding:24px;text-align:center;border:1px dashed var(--border);border-radius:3px;">
+          No AI suggestions found. Run <code>gemini-review.ps1</code> from the project folder to populate this list.
+        </div>
+        <div id="airev-list"></div>
+      </div>
+
       <!-- Analytics -->
       <div id="admin-tab-analytics" class="admin-tab-content">
         <div id="analytics-dashboard"></div>
@@ -2411,7 +2491,7 @@ nav {
         </div>
         <div id="loc-add-form" style="display:none;background:var(--cream-dark);border:1px solid var(--border-strong);border-radius:3px;padding:12px;margin-bottom:14px;"></div>
         <div id="loc-summary" style="font-size:13px;color:var(--text-muted);margin-bottom:8px;"></div>
-        <div id="loc-list-wrap" style="max-height:60vh;overflow-y:auto;border:1px solid var(--border);border-radius:3px;background:var(--cream);">
+        <div id="loc-list-wrap" style="max-height:50vh;overflow-y:auto;border:1px solid var(--border);border-radius:3px;background:var(--cream);">
           <table id="loc-table" style="width:100%;border-collapse:collapse;font-size:12px;">
             <thead style="position:sticky;top:0;background:var(--maroon-dark);color:var(--gold-light);">
               <tr>
@@ -2426,6 +2506,37 @@ nav {
             </thead>
             <tbody id="loc-tbody"></tbody>
           </table>
+        </div>
+
+        <div style="margin-top:22px;padding-top:18px;border-top:1px solid var(--border);">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap;">
+            <h4 style="font-family:'Cinzel',serif;color:var(--maroon-deep);margin:0;font-size:14px;">Used in events but not canonical</h4>
+            <span id="loc-noncanon-summary" style="font-size:12px;color:var(--text-muted);"></span>
+            <span style="margin-left:auto;font-size:11px;color:var(--text-muted);font-style:italic;">Promote each one, map as alias, or rename in events. Or use the wizard for batch handling.</span>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
+            <input type="text" id="loc-noncanon-filter" oninput="renderNonCanonicalLocations()" placeholder="Filter by text / country (e.g. 'london' or 'UK')…" style="background:var(--cream-dark);border:1px solid var(--border-strong);color:var(--text-dark);font-family:'Lato',sans-serif;font-size:12px;height:30px;padding:0 10px;border-radius:2px;flex:1;min-width:240px;">
+            <button class="save-btn" style="padding:5px 12px;font-size:11px;min-width:auto;background:linear-gradient(135deg,var(--gold-dim),var(--gold));color:var(--maroon-deep);" onclick="locOpenConsolidationWizard()" title="Fuzzy-match each non-canonical entry against the master list and propose bulk renames. Use this to clean up typos and duplicates en masse.">🪄 Suggest consolidations</button>
+            <label style="font-size:11px;color:var(--text-muted);display:inline-flex;align-items:center;gap:5px;cursor:pointer;">
+              <input type="checkbox" id="loc-noncanon-polluted-only" onchange="renderNonCanonicalLocations()" style="accent-color:var(--maroon);"> Polluted only
+            </label>
+            <label style="font-size:11px;color:var(--text-muted);display:inline-flex;align-items:center;gap:5px;cursor:pointer;">
+              <input type="checkbox" id="loc-noncanon-resolves-only" onchange="renderNonCanonicalLocations()" style="accent-color:var(--maroon);"> Plots on map only
+            </label>
+          </div>
+          <div id="loc-noncanon-wrap" style="max-height:40vh;overflow-y:auto;border:1px solid var(--border);border-radius:3px;background:var(--cream);">
+            <table style="width:100%;border-collapse:collapse;font-size:12px;">
+              <thead style="position:sticky;top:0;background:var(--maroon-dark);color:var(--gold-light);">
+                <tr>
+                  <th style="padding:8px 10px;text-align:left;">Location text on events</th>
+                  <th style="padding:8px 10px;text-align:right;width:70px;">Events</th>
+                  <th style="padding:8px 10px;text-align:left;width:140px;">Country guess</th>
+                  <th style="padding:8px 10px;text-align:left;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="loc-noncanon-tbody"></tbody>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -4180,10 +4291,13 @@ function _mapLookup(loc) {
 function openBadLocationsModal() {
   document.getElementById('bl-modal').style.display = 'flex';
   document.getElementById('bl-msg').textContent = '';
+  try { sessionStorage.setItem('baps_active_modal', 'bl'); } catch (e) {}
+  _refreshDirtyIndicators();
   renderBadLocations();
 }
 function closeBadLocationsModal() {
   document.getElementById('bl-modal').style.display = 'none';
+  try { sessionStorage.removeItem('baps_active_modal'); } catch (e) {}
 }
 
 function renderBadLocations() {
@@ -4237,6 +4351,10 @@ function blApplyFix(oldLoc, newLoc) {
   if (newLocTrim === oldLoc) { alert('No change.'); return; }
   let updated = 0;
   events.forEach(e => { if (e.location === oldLoc) { e.location = newLocTrim; updated++; } });
+  if (updated > 0) {
+    _audit('event-location-rename', `"${oldLoc}" -> "${newLocTrim}" on ${updated} events`);
+    for (let i = 0; i < updated; i++) _markEventsDirty();
+  }
   buildLocationDatalist();
   document.getElementById('bl-msg').innerHTML = `<span style="color:green">✓ Updated ${updated} event(s) from "${oldLoc}" to "${newLocTrim}".</span>`;
   renderBadLocations();
@@ -4266,6 +4384,8 @@ function _mlSuggestForEvent(ev) {
 function openMissingLocationsModal() {
   document.getElementById('ml-modal').style.display = 'flex';
   document.getElementById('ml-msg').textContent = '';
+  try { sessionStorage.setItem('baps_active_modal', 'ml'); } catch (e) {}
+  _refreshDirtyIndicators();
   // Pre-compute suggestions once (cheap relative to typing).
   _mlSuggestions = new Map();
   events.forEach(e => {
@@ -4278,6 +4398,7 @@ function openMissingLocationsModal() {
 
 function closeMissingLocationsModal() {
   document.getElementById('ml-modal').style.display = 'none';
+  try { sessionStorage.removeItem('baps_active_modal'); } catch (e) {}
 }
 
 function renderMissingLocations() {
@@ -4308,22 +4429,34 @@ function renderMissingLocations() {
   const slice = display.slice(0, CAP);
   const overflow = display.length - slice.length;
 
-  list.innerHTML = slice.map(ev => {
-    const sug = (_mlSuggestions && _mlSuggestions.get(ev.id)) || '';
-    const escSug = sug.replace(/"/g, '&quot;');
-    return `<div style="border:1px solid var(--border);border-radius:3px;padding:10px;margin-bottom:8px;background:var(--cream-dark);" data-mlid="${ev.id}">
-      <div style="display:flex;gap:10px;align-items:center;margin-bottom:6px;flex-wrap:wrap;">
-        <span style="font-size:12px;color:var(--maroon-deep);font-weight:600;">${ev.date || '?'}</span>
-        <span style="font-size:13px;color:var(--text-body);flex:1;min-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${(ev.desc || '').replace(/</g, '&lt;').slice(0, 120)}</span>
-        <div style="display:flex;gap:6px;align-items:center;">
-          <input type="text" class="ml-input" data-autocomplete="location" placeholder="Location" value="${escSug}" style="background:var(--cream);border:1px solid var(--border-strong);color:var(--text-dark);font-family:'Lato',sans-serif;font-size:12px;height:28px;padding:0 8px;border-radius:2px;width:220px;">
-          ${sug ? `<button class="save-btn" style="padding:3px 8px;font-size:11px;min-width:auto;background:transparent;border:1px solid var(--gold);color:var(--gold-dim);" onclick="mlAcceptSuggestion('${ev.id}')" title="Accept '${escSug}'">✨</button>` : ''}
-          <button class="save-btn" style="padding:3px 8px;font-size:11px;min-width:auto;" onclick="mlSaveOne('${ev.id}')">✓ Save</button>
-          <button class="save-btn" style="padding:3px 8px;font-size:11px;min-width:auto;background:transparent;color:var(--maroon-deep);border:1px solid var(--border-strong);" onclick="openModal('${ev.id}')" title="Preview event">👁</button>
-        </div>
+  list.innerHTML = slice.map(ev => _mlPendingRowHtml(ev)).join('') + (overflow > 0 ? `<div style="padding:14px;text-align:center;color:var(--text-muted);font-size:12px;">…and ${overflow} more not shown. Save some, or use the filter dropdown to narrow down.</div>` : '');
+}
+
+// Builds the outer markup for a single Fill-Missing-Locations row in its
+// PENDING state (input + Apply + Preview). Used both during initial render
+// and when undoing an Apply to restore the row in place.
+function _mlPendingRowHtml(ev) {
+  const sug = (_mlSuggestions && _mlSuggestions.get(ev.id)) || '';
+  const escSug = sug.replace(/"/g, '&quot;');
+  const inputStyle = sug
+    ? "background:#fff8e6;border:1px solid var(--gold);color:var(--text-dark);font-family:'Lato',sans-serif;font-size:12px;height:28px;padding:0 8px;border-radius:2px;width:220px;"
+    : "background:var(--cream);border:1px solid var(--border-strong);color:var(--text-dark);font-family:'Lato',sans-serif;font-size:12px;height:28px;padding:0 8px;border-radius:2px;width:220px;";
+  const inputTitle = sug ? `Auto-suggested from event description. Click ✓ Apply if correct, or edit and Apply.` : '';
+  const applyTitle = sug
+    ? `Apply auto-suggested location "${escSug}" (or whatever you typed) to this event in memory. Click 💾 Save below to persist.`
+    : `Apply the typed location to this event in memory. Click 💾 Save below to persist.`;
+  return `<div style="border:1px solid var(--border);border-radius:3px;padding:10px;margin-bottom:8px;background:var(--cream-dark);transition:background 0.2s,border-color 0.2s;" data-mlid="${ev.id}">
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:6px;flex-wrap:wrap;">
+      <span style="font-size:12px;color:var(--maroon-deep);font-weight:600;">${ev.date || '?'}</span>
+      ${sug ? `<span title="Auto-suggested from event description" style="font-size:10px;background:var(--gold);color:var(--maroon-deep);padding:1px 6px;border-radius:2px;font-weight:700;letter-spacing:0.04em;">SUGGESTED</span>` : ''}
+      <span style="font-size:13px;color:var(--text-body);flex:1;min-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${(ev.desc || '').replace(/</g, '&lt;').slice(0, 120)}</span>
+      <div class="ml-controls" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+        <input type="text" class="ml-input" data-autocomplete="location" placeholder="Location" value="${escSug}" title="${inputTitle}" style="${inputStyle}">
+        <button class="save-btn" style="padding:3px 8px;font-size:11px;min-width:auto;" onclick="mlSaveOne('${ev.id}')" title="${applyTitle}">✓ Apply</button>
+        <button class="save-btn" style="padding:3px 8px;font-size:11px;min-width:auto;background:transparent;color:var(--maroon-deep);border:1px solid var(--border-strong);" onclick="openModal('${ev.id}')" title="Preview event">👁</button>
       </div>
-    </div>`;
-  }).join('') + (overflow > 0 ? `<div style="padding:14px;text-align:center;color:var(--text-muted);font-size:12px;">…and ${overflow} more not shown. Save some, or use the filter dropdown to narrow down.</div>` : '');
+    </div>
+  </div>`;
 }
 
 function mlAcceptSuggestion(evId) {
@@ -4335,17 +4468,72 @@ function mlAcceptSuggestion(evId) {
 function mlSaveOne(evId) {
   const row = document.querySelector(`[data-mlid="${evId}"]`);
   if (!row) return;
+  if (row.dataset.mlapplied === '1') return; // already applied — guard against double-fire
   const input = row.querySelector('.ml-input');
   const val = (input.value || '').trim();
   if (!val) { input.style.borderColor = '#a33'; return; }
   const ev = events.find(e => e.id === evId);
   if (!ev) return;
+
   ev.location = val;
   if (_mlSuggestions) _mlSuggestions.delete(evId);
-  document.getElementById('ml-msg').innerHTML = `<span style="color:green">✓ Set location on event ${evId.slice(0, 14)}…</span>`;
+  _audit('event-location-set', `${ev.id} · ${ev.date || ''} · "${val}"`);
+  _markEventsDirty();
+
+  // Visually mark the row applied IN PLACE (don't re-render the whole list).
+  // This gives a clear "you just did this" cue and keeps scroll position.
+  row.dataset.mlapplied = '1';
+  row.style.background = 'rgba(10,125,60,0.12)';
+  row.style.borderColor = '#0a7d3c';
+  const escVal = String(val).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const controls = row.querySelector('.ml-controls');
+  if (controls) {
+    controls.innerHTML = `
+      <span style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;background:#0a7d3c;color:#fff;border-radius:3px;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">✓ Applied</span>
+      <span style="font-size:12px;color:var(--text-body);font-style:italic;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escVal}">${escVal}</span>
+      <button class="save-btn" style="padding:3px 8px;font-size:11px;min-width:auto;background:transparent;color:#a33;border:1px solid rgba(160,40,40,0.4);" onclick="mlUndoOne('${ev.id}')" title="Restore the original empty location and undo this change">↶ Undo</button>
+      <button class="save-btn" style="padding:3px 8px;font-size:11px;min-width:auto;background:transparent;color:var(--maroon-deep);border:1px solid var(--border-strong);" onclick="openModal('${ev.id}')" title="Preview event">👁</button>`;
+  }
+
+  // Refresh just the summary line so "X with no location" decrements live.
+  _mlRefreshSummary();
+  document.getElementById('ml-msg').innerHTML = `<span style="color:#0a7d3c;font-weight:600;">✓ Applied "${escVal}" to event ${evId.slice(0, 14)}… (still in memory - click 💾 Save below to persist)</span>`;
+
   buildLocationDatalist();
-  renderMissingLocations();
   renderManageList && renderManageList(1);
+}
+
+function mlUndoOne(evId) {
+  const row = document.querySelector(`[data-mlid="${evId}"]`);
+  const ev  = events.find(e => e.id === evId);
+  if (!ev || !row) return;
+  ev.location = '';
+  // Decrement dirty: undoing a pending change reduces the unsaved count.
+  if (_eventsDirty > 0) { _eventsDirty--; _refreshDirtyIndicators(); }
+  _audit('event-location-undo', `${ev.id} · ${ev.date || ''}`);
+  // Re-pre-compute the suggestion for this row in case the canonical set changed.
+  const sug = _mlSuggestForEvent(ev);
+  if (sug) {
+    if (!_mlSuggestions) _mlSuggestions = new Map();
+    _mlSuggestions.set(evId, sug);
+  }
+  // Restore the row IN PLACE — don't full-re-render the list. The list is
+  // filtered to events with no location, so a full re-render would HIDE every
+  // other row that's been applied this session, making it look as if those
+  // got undone too.
+  row.outerHTML = _mlPendingRowHtml(ev);
+  buildLocationDatalist();
+  _mlRefreshSummary();
+  renderManageList && renderManageList(1);
+}
+
+function _mlRefreshSummary() {
+  const sum = document.getElementById('ml-summary');
+  if (!sum) return;
+  const empty = events.filter(e => !e.location).length;
+  const withSug = events.filter(e => !e.location && _mlSuggestions && _mlSuggestions.has(e.id)).length;
+  const noSug   = empty - withSug;
+  sum.innerHTML = `<strong>${empty}</strong> event(s) with no location · <strong>${withSug}</strong> have an auto-suggestion · <strong>${noSug}</strong> need manual entry.`;
 }
 
 function mlBulkApply() {
@@ -4362,6 +4550,8 @@ function mlBulkApply() {
   if (!confirm(`Set location to "${val}" on ${target.length} event(s)? This affects every event matching the current filter, not just what's visible on screen.`)) return;
   let count = 0;
   target.forEach(e => { e.location = val; count++; if (_mlSuggestions) _mlSuggestions.delete(e.id); });
+  _audit('event-location-bulk-set', `"${val}" on ${count} events`);
+  for (let i = 0; i < count; i++) _markEventsDirty();
   document.getElementById('ml-msg').innerHTML = `<span style="color:green">✓ Set "${val}" on ${count} event(s).</span>`;
   document.getElementById('ml-bulk').value = '';
   buildLocationDatalist();
@@ -4373,6 +4563,10 @@ function blClearLocation(oldLoc) {
   if (!confirm(`Clear the location field on all ${events.filter(e => e.location === oldLoc).length} event(s) with "${oldLoc}"?`)) return;
   let cleared = 0;
   events.forEach(e => { if (e.location === oldLoc) { e.location = ''; cleared++; } });
+  if (cleared > 0) {
+    _audit('event-location-clear', `"${oldLoc}" cleared on ${cleared} events`);
+    for (let i = 0; i < cleared; i++) _markEventsDirty();
+  }
   document.getElementById('bl-msg').innerHTML = `<span style="color:green">✓ Cleared location on ${cleared} event(s).</span>`;
   renderBadLocations();
   renderManageList && renderManageList(1);
@@ -5178,7 +5372,9 @@ function switchAdminTab(name) {
   document.querySelectorAll('.admin-tab-content').forEach(c => c.classList.remove('active'));
   document.querySelector(`.admin-tab[onclick*="${name}"]`).classList.add('active');
   document.getElementById(`admin-tab-${name}`).classList.add('active');
+  try { sessionStorage.setItem('baps_admin_tab', name); } catch (e) {}
   if (name === 'manage')    renderManageList();
+  if (name === 'airev')     renderAiReview();
   if (name === 'export')    renderStats();
   if (name === 'analytics') renderAnalytics();
   if (name === 'password') { document.getElementById('pw-current').value=''; document.getElementById('pw-new').value=''; document.getElementById('pw-confirm').value=''; document.getElementById('pw-msg').textContent=''; }
@@ -7397,8 +7593,14 @@ async function _fsaGetHandle(key) {
 
 async function _fsaEnsurePermission(handle) {
   const opts = { mode: 'readwrite' };
-  if (await handle.queryPermission(opts)   === 'granted') return true;
-  if (await handle.requestPermission(opts) === 'granted') return true;
+  try {
+    if (await handle.queryPermission(opts)   === 'granted') return true;
+    if (await handle.requestPermission(opts) === 'granted') return true;
+  } catch (e) {
+    // Handle is stale (file deleted/moved/renamed, or permission revoked).
+    // Caller will fall back to picking a fresh file.
+    console.warn('[fsa] permission check threw, treating handle as stale:', e);
+  }
   return false;
 }
 
@@ -7486,22 +7688,114 @@ async function _fsaSaveJson(key, suggestedName, getContent, statusElId) {
     if (e.name === 'AbortError') {
       setStatus('Cancelled.');
     } else {
-      setStatus(`✕ ${e.message || e}`, '#a33');
-      console.error(e);
+      // Stale handle / file vanished / permission revoked: drop the cached
+      // handle so the next click automatically re-picks the file.
+      const stale = ['NotFoundError', 'NotAllowedError', 'NoModificationAllowedError', 'InvalidStateError'].includes(e.name);
+      if (stale) {
+        try { await _fsaDeleteHandle(key); } catch (_) {}
+        setStatus(`✕ ${e.name}: file vanished or permission lost. Click Save again to re-pick the file.`, '#a33');
+      } else {
+        setStatus(`✕ ${e.message || e}`, '#a33');
+      }
+      console.error(`[fsa] save '${key}' failed (${e.name}):`, e);
     }
     return false;
   }
 }
 
+// Tracks unsaved in-memory mutations since the last successful save-to-disk.
+// Modals like Fill Missing Locations / Bad Locations surface this so users
+// see they still need to persist.
+let _eventsDirty = 0;
+function _markEventsDirty() {
+  _eventsDirty++;
+  _refreshDirtyIndicators();
+}
+function _clearEventsDirty() {
+  _eventsDirty = 0;
+  _refreshDirtyIndicators();
+}
+function _refreshDirtyIndicators() {
+  const txt = _eventsDirty
+    ? `⚠ ${_eventsDirty} unsaved change${_eventsDirty === 1 ? '' : 's'} - click Save below`
+    : '';
+  ['ml-dirty', 'bl-dirty'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = txt;
+    el.style.display = _eventsDirty ? 'inline' : 'none';
+  });
+}
+
+let _saveEventsInFlight = false;
+
 async function saveEventsToDisk() {
-  const payload = {
-    categories: typeof EVENT_CATEGORIES !== 'undefined' ? EVENT_CATEGORIES : [],
-    events: events,
-    threads: window._THREADS || []
-  };
-  const content = JSON.stringify(payload, null, 2);
-  const ok = await _fsaSaveJson('events.json', 'events.json', () => content, 'fsa-events-status');
-  if (ok) _audit('save-events-to-disk', `${events.length} events`);
+  if (_saveEventsInFlight) {
+    console.warn('saveEventsToDisk: another save is already in flight; ignoring duplicate click');
+    return false;
+  }
+  _saveEventsInFlight = true;
+  let ok = false;
+  try {
+    const payload = {
+      categories: typeof EVENT_CATEGORIES !== 'undefined' ? EVENT_CATEGORIES : [],
+      events: events,
+      threads: window._THREADS || []
+    };
+    const content = JSON.stringify(payload, null, 2);
+    console.log(`[saveEventsToDisk] attempting save (${content.length.toLocaleString()} chars, ${events.length} events, dirty=${_eventsDirty})`);
+    ok = await _fsaSaveJson('events.json', 'events.json', () => content, 'fsa-events-status');
+    if (ok) {
+      _audit('save-events-to-disk', `${events.length} events`);
+      _clearEventsDirty();
+      console.log('[saveEventsToDisk] success');
+    } else {
+      console.warn('[saveEventsToDisk] _fsaSaveJson returned false (cancelled or denied)');
+    }
+  } catch (e) {
+    console.error('[saveEventsToDisk] threw:', e);
+    alert('Save failed: ' + (e.message || e) + '\n\nCheck the dev console for details. If this keeps happening, click "↻ Re-link" in the Export tab to re-pick the events.json file.');
+  } finally {
+    _saveEventsInFlight = false;
+  }
+  return ok;
+}
+
+// Wrapper used from modal save buttons (Fill Missing Locations, Bad Locations).
+// Updates the modal's dirty-indicator span with "Saving... / Saved at HH:MM:SS / Save failed"
+// so the user gets immediate feedback without switching to the Export tab.
+async function saveEventsToDiskFromModal(dirtyElId) {
+  const el = dirtyElId && document.getElementById(dirtyElId);
+  if (el) {
+    el.style.display = 'inline';
+    el.style.color = 'var(--text-muted)';
+    el.textContent = 'Saving...';
+  }
+  const eventsBefore = events.length;
+  const ok = await saveEventsToDisk();
+  if (!el) return ok;
+  if (ok) {
+    el.style.color = '#0a7';
+    el.style.background = 'rgba(10,125,60,0.10)';
+    el.style.padding = '3px 10px';
+    el.style.border = '1px solid #0a7d3c';
+    el.style.borderRadius = '3px';
+    el.textContent = `✓ events.json written to disk at ${new Date().toLocaleTimeString()} (${eventsBefore} events)`;
+    setTimeout(() => {
+      el.style.background = '';
+      el.style.padding = '';
+      el.style.border = '';
+      el.style.borderRadius = '';
+      _refreshDirtyIndicators();
+    }, 8000);
+  } else {
+    el.style.color = '#a33';
+    el.style.background = '';
+    el.style.padding = '';
+    el.style.border = '';
+    el.textContent = `✕ Save did not complete - see dev console (F12)`;
+  }
+  return ok;
 }
 
 async function saveLocationsToDisk() {
@@ -8030,6 +8324,24 @@ fetch('events.json')
         setTimeout(() => {
           if (savedPanel === 'admin' && !isAdmin) return; // don't auto-open admin if not logged in
           showPanel(savedPanel);
+          // Restore admin sub-tab + active modal so a save-triggered reload
+          // lands the user back exactly where they were.
+          if (savedPanel === 'admin' && isAdmin) {
+            try {
+              const savedTab = sessionStorage.getItem('baps_admin_tab');
+              if (savedTab && document.getElementById('admin-tab-' + savedTab)) {
+                switchAdminTab(savedTab);
+              }
+            } catch (e) {}
+            try {
+              const savedModal = sessionStorage.getItem('baps_active_modal');
+              if (savedModal === 'ml' && typeof openMissingLocationsModal === 'function') {
+                setTimeout(openMissingLocationsModal, 80);
+              } else if (savedModal === 'bl' && typeof openBadLocationsModal === 'function') {
+                setTimeout(openBadLocationsModal, 80);
+              }
+            } catch (e) {}
+          }
         }, 50);
       }
     } catch (e) {}
@@ -8045,6 +8357,30 @@ fetch('events.json')
 const AUDIT_KEY = 'baps_audit_log';
 const AUDIT_MAX = 1000;
 
+// Actions for which auto-backup should NOT tick. The disk save itself is a
+// fresh full copy of events.json, so triggering an additional auto-backup
+// download right after is redundant and confuses users into thinking the
+// download IS the save. Batch-edit actions (Fill Missing Locations / Bad
+// Locations) also skip — those produce dozens of changes per session and
+// the user persists once at the end via the modal's 💾 Save button.
+const _AUDIT_NO_BACKUP_ACTIONS = new Set([
+  'save-events-to-disk',
+  'save-locations-to-disk',
+  'backup-manual',
+  'backup-auto',
+  'backup-interval-changed',
+  'event-location-set',
+  'event-location-bulk-set',
+  'event-location-rename',
+  'event-location-clear',
+  'event-location-undo',
+  'ai-edit-accept',
+  'ai-edit-reject',
+  'ai-edit-edited-accept',
+  'ai-edit-accept-all-trivial',
+  'ai-edit-discard-all'
+]);
+
 function _audit(action, details) {
   try {
     const log = JSON.parse(localStorage.getItem(AUDIT_KEY) || '[]');
@@ -8052,8 +8388,8 @@ function _audit(action, details) {
     while (log.length > AUDIT_MAX) log.shift();
     localStorage.setItem(AUDIT_KEY, JSON.stringify(log));
   } catch (e) { /* localStorage full or unavailable */ }
-  // Hook backups to admin actions.
-  _backupTick();
+  // Hook backups to admin actions, but skip for save/backup actions themselves.
+  if (!_AUDIT_NO_BACKUP_ACTIONS.has(action)) _backupTick();
 }
 
 function renderAuditLog() {
@@ -8081,6 +8417,185 @@ function renderAuditLog() {
       <span style="color:var(--text-body);flex:1;">${(e.details || '').replace(/</g, '&lt;')}</span>
     </div>`;
   }).join('');
+}
+
+// ── AI Review (Gemini-suggested copy edits) ──────────
+let _airevPage = 1;
+const _AIREV_PAGE_SIZE = 8;
+const _airevSkipped = new Set();
+
+function _airevPending() {
+  return (typeof events !== 'undefined' ? events : [])
+    .filter(e => e && e.desc_ai && typeof e.desc_ai.suggested === 'string' && e.desc_ai.suggested.length);
+}
+
+function _airevClassify(orig, sug) {
+  const norm = s => (s || '').toLowerCase().replace(/[\s\p{P}]+/gu, '');
+  return norm(orig) === norm(sug) ? 'trivial' : 'major';
+}
+
+function _airevEsc(s) {
+  return (s == null ? '' : String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Word-level LCS diff. Returns HTML with airev-diff-add / airev-diff-rem spans.
+function _airevWordDiff(a, b) {
+  const split = s => (s || '').split(/(\s+)/); // keep whitespace as tokens
+  const A = split(a), B = split(b);
+  const m = A.length, n = B.length;
+  const lcs = Array.from({length: m + 1}, () => new Uint16Array(n + 1));
+  for (let i = m - 1; i >= 0; i--) {
+    for (let j = n - 1; j >= 0; j--) {
+      if (A[i] === B[j]) lcs[i][j] = lcs[i + 1][j + 1] + 1;
+      else lcs[i][j] = Math.max(lcs[i + 1][j], lcs[i][j + 1]);
+    }
+  }
+  let i = 0, j = 0, out = '';
+  while (i < m && j < n) {
+    if (A[i] === B[j]) { out += _airevEsc(A[i]); i++; j++; }
+    else if (lcs[i + 1][j] >= lcs[i][j + 1]) { out += `<span class="airev-diff-rem">${_airevEsc(A[i])}</span>`; i++; }
+    else                                     { out += `<span class="airev-diff-add">${_airevEsc(B[j])}</span>`; j++; }
+  }
+  while (i < m) { out += `<span class="airev-diff-rem">${_airevEsc(A[i++])}</span>`; }
+  while (j < n) { out += `<span class="airev-diff-add">${_airevEsc(B[j++])}</span>`; }
+  return out;
+}
+
+function renderAiReview() {
+  const list  = document.getElementById('airev-list');
+  const stats = document.getElementById('airev-stats');
+  const empty = document.getElementById('airev-empty-msg');
+  if (!list || !stats) return;
+
+  const filterMode = (document.getElementById('airev-filter') || {}).value || 'all';
+  const all  = _airevPending();
+  const trivCount  = all.filter(e => _airevClassify(e.desc, e.desc_ai.suggested) === 'trivial').length;
+  const majorCount = all.length - trivCount;
+
+  let filtered = all.filter(e => !_airevSkipped.has(e.id));
+  if (filterMode === 'major')   filtered = filtered.filter(e => _airevClassify(e.desc, e.desc_ai.suggested) === 'major');
+  if (filterMode === 'trivial') filtered = filtered.filter(e => _airevClassify(e.desc, e.desc_ai.suggested) === 'trivial');
+
+  stats.innerHTML = `<strong>${all.length}</strong> pending suggestion${all.length === 1 ? '' : 's'}` +
+    ` &middot; ${majorCount} major, ${trivCount} trivial` +
+    (_airevSkipped.size ? ` &middot; ${_airevSkipped.size} skipped this session` : '');
+
+  if (all.length === 0) { empty.style.display = 'block'; list.innerHTML = ''; return; }
+  empty.style.display = 'none';
+
+  const total = filtered.length;
+  const numPages = Math.max(1, Math.ceil(total / _AIREV_PAGE_SIZE));
+  if (_airevPage > numPages) _airevPage = numPages;
+  if (_airevPage < 1) _airevPage = 1;
+  const slice = filtered.slice((_airevPage - 1) * _AIREV_PAGE_SIZE, _airevPage * _AIREV_PAGE_SIZE);
+
+  const pager = total > _AIREV_PAGE_SIZE
+    ? `<div class="airev-pager">
+        <button onclick="_airevGoto(${_airevPage - 1})" ${_airevPage <= 1 ? 'disabled' : ''}>‹ Prev</button>
+        <span>Page ${_airevPage} of ${numPages} &middot; showing ${slice.length} of ${total}</span>
+        <button onclick="_airevGoto(${_airevPage + 1})" ${_airevPage >= numPages ? 'disabled' : ''}>Next ›</button>
+      </div>` : '';
+
+  const cards = slice.map(ev => {
+    const orig = ev.desc || '';
+    const sug  = ev.desc_ai.suggested || '';
+    const cls  = _airevClassify(orig, sug);
+    const meta = `${ev.date || '(no date)'}${ev.location ? ' &middot; ' + _airevEsc(ev.location) : ''} &middot; ${_airevEsc(ev.id)} &middot; ${cls === 'trivial' ? 'trivial change' : 'major change'}`;
+    return `<div class="airev-card" data-evid="${_airevEsc(ev.id)}">
+      <div class="airev-meta">${meta}</div>
+      <div class="airev-pane-label">Current</div>
+      <div class="airev-pane">${_airevEsc(orig)}</div>
+      <div class="airev-pane-label">Suggested</div>
+      <div class="airev-pane suggested">${_airevEsc(sug)}</div>
+      <div class="airev-pane-label">Diff (red = removed, green = added)</div>
+      <div class="airev-pane">${_airevWordDiff(orig, sug)}</div>
+      <div class="airev-edit-area" style="display:none;margin-top:10px;">
+        <div class="airev-pane-label">Edit suggestion before accepting</div>
+        <textarea class="airev-edit-textarea" id="airev-edit-${_airevEsc(ev.id)}">${_airevEsc(sug)}</textarea>
+      </div>
+      <div class="airev-actions">
+        <button class="airev-btn airev-btn-accept" onclick="aiReviewAccept('${ev.id}')">✓ Accept</button>
+        <button class="airev-btn airev-btn-reject" onclick="aiReviewReject('${ev.id}')">✗ Reject</button>
+        <button class="airev-btn airev-btn-edit"   onclick="aiReviewToggleEdit('${ev.id}')">✎ Edit suggestion</button>
+        <button class="airev-btn airev-btn-skip"   onclick="aiReviewSkip('${ev.id}')">→ Skip for now</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  list.innerHTML = pager + (cards || `<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:13px;">No suggestions match the current filter.</div>`) + (cards ? pager : '');
+}
+
+function _airevGoto(p) { _airevPage = p; renderAiReview(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+
+function aiReviewAccept(evId) {
+  const ev = events.find(e => e.id === evId);
+  if (!ev || !ev.desc_ai) return;
+  ev.desc = ev.desc_ai.suggested;
+  delete ev.desc_ai;
+  _audit('ai-edit-accept', `${ev.id} · ${ev.date || ''}`);
+  renderAiReview();
+}
+
+function aiReviewReject(evId) {
+  const ev = events.find(e => e.id === evId);
+  if (!ev || !ev.desc_ai) return;
+  delete ev.desc_ai;
+  _audit('ai-edit-reject', `${ev.id} · ${ev.date || ''}`);
+  renderAiReview();
+}
+
+function aiReviewToggleEdit(evId) {
+  const card = document.querySelector(`.airev-card[data-evid="${evId}"]`);
+  if (!card) return;
+  const area = card.querySelector('.airev-edit-area');
+  const acts = card.querySelector('.airev-actions');
+  if (area.style.display === 'none') {
+    area.style.display = 'block';
+    acts.innerHTML = `
+      <button class="airev-btn airev-btn-accept" onclick="aiReviewSaveEdit('${evId}')">✓ Save edited version</button>
+      <button class="airev-btn airev-btn-skip"   onclick="renderAiReview()">Cancel</button>`;
+    const ta = document.getElementById('airev-edit-' + evId);
+    if (ta) ta.focus();
+  } else {
+    area.style.display = 'none';
+    renderAiReview();
+  }
+}
+
+function aiReviewSaveEdit(evId) {
+  const ev = events.find(e => e.id === evId);
+  if (!ev) return;
+  const ta = document.getElementById('airev-edit-' + evId);
+  const newDesc = ta ? ta.value : '';
+  if (!newDesc.trim()) { alert('Edited text is empty.'); return; }
+  ev.desc = newDesc;
+  delete ev.desc_ai;
+  _audit('ai-edit-edited-accept', `${ev.id} · ${ev.date || ''}`);
+  renderAiReview();
+}
+
+function aiReviewSkip(evId) {
+  _airevSkipped.add(evId);
+  renderAiReview();
+}
+
+function aiReviewAcceptAllTrivial() {
+  const trivials = _airevPending().filter(e => _airevClassify(e.desc, e.desc_ai.suggested) === 'trivial');
+  if (!trivials.length) { alert('No trivial-only suggestions to accept.'); return; }
+  if (!confirm(`Accept ${trivials.length} trivial suggestion${trivials.length === 1 ? '' : 's'}?\n\nThese have only punctuation, capitalisation, or whitespace changes.`)) return;
+  trivials.forEach(ev => { ev.desc = ev.desc_ai.suggested; delete ev.desc_ai; });
+  _audit('ai-edit-accept-all-trivial', `${trivials.length} events`);
+  renderAiReview();
+}
+
+function aiReviewClearAll() {
+  const pending = _airevPending();
+  if (!pending.length) { alert('No pending suggestions.'); return; }
+  if (!confirm(`Discard all ${pending.length} pending AI suggestion${pending.length === 1 ? '' : 's'}?\n\nOriginal descriptions will be kept unchanged.`)) return;
+  pending.forEach(ev => { delete ev.desc_ai; });
+  _audit('ai-edit-discard-all', `${pending.length} suggestions`);
+  _airevSkipped.clear();
+  renderAiReview();
 }
 
 function exportAuditLog() {
@@ -8712,6 +9227,8 @@ function renderLocationsList() {
       </td>
     </tr>`;
   }).join('') || '<tr><td colspan="7" style="padding:24px;text-align:center;color:var(--text-muted);">— No places match the filter —</td></tr>';
+
+  renderNonCanonicalLocations();
 }
 
 function _locFormHtml(values) {
@@ -8814,19 +9331,485 @@ function locSaveAlias() {
   renderLocationsList();
 }
 
+// ── Non-canonical locations (used in events but not in master list) ──
+function _isCanonicalLocText(loc) {
+  if (!loc) return false;
+  const titled = k => k.replace(/\b\w/g, c => c.toUpperCase());
+  const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+  const target = norm(loc);
+  for (const k of Object.keys(_MAP_LOCATIONS)) {
+    const meta = _locMeta(k);
+    if (target === norm(k)) return true;
+    if (target === norm(`${titled(k)}, ${meta.country}`)) return true;
+  }
+  for (const [alias, canonical] of Object.entries(_LOCATION_ALIASES)) {
+    if (!_MAP_LOCATIONS[canonical]) continue;
+    const meta = _locMeta(canonical);
+    if (target === norm(alias)) return true;
+    if (target === norm(`${titled(alias)}, ${meta.country}`)) return true;
+  }
+  return false;
+}
+
+function _locNonCanonical() {
+  const map = new Map();
+  events.forEach(e => {
+    if (!e.location) return;
+    if (_isCanonicalLocText(e.location)) return;
+    map.set(e.location, (map.get(e.location) || 0) + 1);
+  });
+  return [...map.entries()]
+    .map(([text, count]) => {
+      const meta = _mapLookup(text);
+      const guess = meta ? meta.country : ((text.split(',').slice(-1)[0] || '').trim());
+      const polluted = _looksLikePollutedLocation(text);
+      return { text, count, country: guess, resolves: !!meta, resolvesTo: meta ? meta.key : null, polluted };
+    })
+    .sort((a, b) => (b.polluted ? 1 : 0) - (a.polluted ? 1 : 0) || b.count - a.count || a.text.localeCompare(b.text));
+}
+
+// Take a polluted free-text location and return the best plausible place-name
+// segment. Prefers "Place, Country" forms; penalises segments containing
+// descriptive words; rewards segments that resolve via _mapLookup.
+// e.g.,  "London / London, UK / London Mandir Ceremony" -> "London, UK"
+function _locFirstSegment(text) {
+  const t = String(text || '');
+  const segs = t.split(/\s*[\/|;]\s*/).map(s => s.trim()).filter(Boolean);
+  if (segs.length > 1) {
+    const descWords = /\b(ceremony|festival|day|celebration|murti|pratishtha|janmashtami|prasang|katha|shibir|sabha|patotsav|samaiyo|samaiya|seva|anniversary|birthday|opening|launch|inauguration|prayer|bhakti|yatra)\b/i;
+    let best = segs[0], bestScore = -Infinity;
+    for (const s of segs) {
+      if (s.length > 50) continue;            // still too long to be a place
+      let score = 0;
+      if (_mapLookup(s)) score += 10;         // resolves to a canonical place
+      if (s.includes(',')) score += 5;        // "Place, Country" form
+      if (descWords.test(s)) score -= 20;     // looks like description text
+      score -= s.length / 10;                  // mild bias toward shorter
+      if (score > bestScore) { bestScore = score; best = s; }
+    }
+    return best;
+  }
+  // No slash separators: trim trailing comma-separated extras if there are >2
+  const commas = t.split(',');
+  if (commas.length > 3) return commas.slice(0, 2).map(s => s.trim()).join(', ');
+  return t.trim();
+}
+
+function renderNonCanonicalLocations() {
+  const tbody = document.getElementById('loc-noncanon-tbody');
+  const sum   = document.getElementById('loc-noncanon-summary');
+  if (!tbody) return;
+  const allRows  = _locNonCanonical();
+  const totalAll = allRows.length;
+  const totalEvAll = allRows.reduce((a, r) => a + r.count, 0);
+
+  // Apply filters
+  const q = ((document.getElementById('loc-noncanon-filter') || {}).value || '').toLowerCase().trim();
+  const pollutedOnly = !!((document.getElementById('loc-noncanon-polluted-only') || {}).checked);
+  const resolvesOnly = !!((document.getElementById('loc-noncanon-resolves-only') || {}).checked);
+  let rows = allRows;
+  if (q) rows = rows.filter(r => `${r.text} ${r.country || ''}`.toLowerCase().includes(q));
+  if (pollutedOnly) rows = rows.filter(r => r.polluted);
+  if (resolvesOnly) rows = rows.filter(r => r.resolves);
+
+  const totalEv = rows.reduce((a, r) => a + r.count, 0);
+  if (totalAll === 0) {
+    sum.innerHTML = `<span style="color:#0a7;">All event locations match the master list.</span>`;
+  } else if (rows.length === totalAll) {
+    sum.innerHTML = `<strong>${totalAll}</strong> distinct location${totalAll === 1 ? '' : 's'} on <strong>${totalEvAll}</strong> event${totalEvAll === 1 ? '' : 's'}.`;
+  } else {
+    sum.innerHTML = `Showing <strong>${rows.length}</strong> of ${totalAll} (matching ${totalEv} of ${totalEvAll} events).`;
+  }
+  if (totalAll === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" style="padding:24px;text-align:center;color:var(--text-muted);">All event locations match the master list above.</td></tr>';
+    return;
+  }
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="4" style="padding:24px;text-align:center;color:var(--text-muted);">No entries match the current filter.</td></tr>';
+    return;
+  }
+  const escAttr = s => s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  const escHtml = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  tbody.innerHTML = rows.map(r => {
+    const resHint = r.resolves
+      ? `<span title="Currently resolves to canonical '${escAttr(r.resolvesTo)}' but text differs" style="font-size:10px;color:var(--text-muted);font-style:italic;">(plots as ${escHtml(r.resolvesTo)})</span>`
+      : `<span title="Does not resolve to any canonical place — won't plot on the map" style="font-size:10px;color:#a33;font-style:italic;">(no map match)</span>`;
+    const pollutedFlag = r.polluted
+      ? `<span title="Looks like description text, not a place name" style="display:inline-block;font-size:10px;background:#a33;color:#fff;padding:1px 6px;border-radius:2px;font-weight:700;letter-spacing:0.04em;margin-right:6px;">POLLUTED</span>`
+      : '';
+    const cleanedSuggestion = r.polluted ? _locFirstSegment(r.text) : '';
+    const cleanupBtn = r.polluted
+      ? `<button class="save-btn" style="padding:3px 8px;font-size:11px;min-width:auto;background:#a33;color:#fff;border:1px solid #802424;" onclick='locApplyCleanup(${JSON.stringify(r.text)}, ${JSON.stringify(cleanedSuggestion)})' title="Replace this polluted text with '${escAttr(cleanedSuggestion)}' on all events that use it">⚒ Clean to "${escHtml(cleanedSuggestion)}"</button>`
+      : '';
+    return `<tr style="border-bottom:1px solid var(--border);">
+      <td style="padding:6px 10px;color:var(--text-body);"><div>${pollutedFlag}${escHtml(r.text)}</div><div>${resHint}</div></td>
+      <td style="padding:6px 10px;text-align:right;font-family:monospace;color:var(--maroon-deep);">${r.count}</td>
+      <td style="padding:6px 10px;color:var(--text-muted);">${escHtml(r.country) || '<span style="font-style:italic;">unknown</span>'}</td>
+      <td style="padding:6px 6px;white-space:nowrap;">
+        ${cleanupBtn}
+        <button class="save-btn" style="padding:3px 8px;font-size:11px;min-width:auto;background:linear-gradient(135deg,var(--gold-dim),var(--gold));color:var(--maroon-deep);" onclick='locPromoteFromText(${JSON.stringify(r.text)})' title="Open Add Place form pre-filled with this name">✨ Promote</button>
+        <button class="save-btn" style="padding:3px 8px;font-size:11px;min-width:auto;" onclick='locShowAliasFromText(${JSON.stringify(r.text)})' title="Map this text as an alias of an existing canonical place">↪ Map as alias</button>
+        <button class="save-btn" style="padding:3px 8px;font-size:11px;min-width:auto;background:transparent;color:var(--maroon-deep);border:1px solid var(--border-strong);" onclick='locShowRenameFromText(${JSON.stringify(r.text)})' title="Replace this text on all events that use it">✎ Rename in events</button>
+        <button class="save-btn" style="padding:3px 8px;font-size:11px;min-width:auto;background:transparent;color:#a33;border:1px solid rgba(160,40,40,0.4);" onclick='locClearFromEvents(${JSON.stringify(r.text)})' title="Clear (empty) the location field on every event that uses this text. Use when the text is description rather than a real place name.">✕ Clear from events</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Fuzzy match helpers (used by the consolidation wizard) ──
+function _locLevenshtein(a, b) {
+  if (a === b) return 0;
+  const m = a.length, n = b.length;
+  if (!m) return n;
+  if (!n) return m;
+  let prev = new Array(n + 1);
+  let curr = new Array(n + 1);
+  for (let j = 0; j <= n; j++) prev[j] = j;
+  for (let i = 1; i <= m; i++) {
+    curr[0] = i;
+    for (let j = 1; j <= n; j++) {
+      const cost = a.charCodeAt(i - 1) === b.charCodeAt(j - 1) ? 0 : 1;
+      curr[j] = Math.min(curr[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost);
+    }
+    [prev, curr] = [curr, prev];
+  }
+  return prev[n];
+}
+
+function _locTokenize(s) {
+  return new Set(
+    String(s || '').toLowerCase().split(/[\s,\/|;]+/).map(t => t.trim()).filter(Boolean)
+  );
+}
+
+function _locJaccard(a, b) {
+  if (!a.size && !b.size) return 1;
+  let inter = 0;
+  a.forEach(x => { if (b.has(x)) inter++; });
+  const union = a.size + b.size - inter;
+  return union ? inter / union : 0;
+}
+
+// Returns { target, canonicalKey, jaccard, levenshtein, score, confidence }
+// or null if no plausible match.
+function _locProposeRename(text) {
+  const titled = k => k.replace(/\b\w/g, c => c.toUpperCase());
+  const norm   = s => s.toLowerCase().replace(/\s+/g, ' ').trim();
+  const targetTokens = _locTokenize(text);
+  const targetN = norm(text);
+
+  let best = null;
+
+  for (const k of Object.keys(_MAP_LOCATIONS)) {
+    const meta = _locMeta(k);
+    const labelWithCountry = meta.country !== 'Other' ? `${titled(k)}, ${meta.country}` : titled(k);
+    if (norm(labelWithCountry) === targetN) continue; // already canonical (defensive)
+
+    const labelTokens = _locTokenize(labelWithCountry);
+    const j = _locJaccard(targetTokens, labelTokens);
+    const lev = _locLevenshtein(targetN, norm(labelWithCountry));
+
+    let score = 0;
+    if (j >= 0.9 || lev <= 1) score = 100 + (j * 10) - lev;
+    else if (j >= 0.7 || lev <= 2) score = 80 + (j * 10) - lev;
+    else if (j >= 0.5 || lev <= 3) score = 60 + (j * 10) - lev;
+    else continue;
+
+    if (!best || score > best.score) {
+      best = {
+        target: labelWithCountry,
+        canonicalKey: k,
+        jaccard: +j.toFixed(2),
+        levenshtein: lev,
+        score,
+        confidence: score >= 95 ? 'HIGH' : (score >= 75 ? 'MEDIUM' : 'LOW')
+      };
+    }
+  }
+
+  return best;
+}
+
+// ── Consolidation wizard state + functions ──
+let _consProposals = [];
+
+function locOpenConsolidationWizard() {
+  const all = _locNonCanonical();
+  _consProposals = all
+    .map(r => Object.assign({}, r, { proposal: _locProposeRename(r.text), selected: false }))
+    .filter(r => r.proposal !== null);
+  // Auto-select all HIGH proposals so the common case is one-click.
+  _consProposals.forEach(r => { if (r.proposal.confidence === 'HIGH') r.selected = true; });
+  document.getElementById('loc-cons-modal').style.display = 'flex';
+  const filterEl = document.getElementById('loc-cons-filter');
+  if (filterEl) filterEl.value = '';
+  locConsRender();
+}
+
+function locCloseConsolidationWizard() {
+  document.getElementById('loc-cons-modal').style.display = 'none';
+}
+
+function locConsToggleSelected(text) {
+  const r = _consProposals.find(p => p.text === text);
+  if (r) r.selected = !r.selected;
+  locConsRender();
+}
+
+function locConsToggleAll(level) {
+  _consProposals.forEach(r => {
+    if (level === 'high')        r.selected = r.proposal.confidence === 'HIGH';
+    else if (level === 'medium') r.selected = r.proposal.confidence === 'HIGH' || r.proposal.confidence === 'MEDIUM';
+    else if (level === 'all')    r.selected = true;
+    else                          r.selected = false;
+  });
+  locConsRender();
+}
+
+function locConsRender() {
+  const list = document.getElementById('loc-cons-list');
+  const sum  = document.getElementById('loc-cons-summary');
+  if (!list || !sum) return;
+
+  const total = _consProposals.length;
+  const high  = _consProposals.filter(r => r.proposal.confidence === 'HIGH').length;
+  const med   = _consProposals.filter(r => r.proposal.confidence === 'MEDIUM').length;
+  const low   = _consProposals.filter(r => r.proposal.confidence === 'LOW').length;
+  const sel   = _consProposals.filter(r => r.selected);
+  const selEvs = sel.reduce((a, r) => a + r.count, 0);
+
+  sum.innerHTML = `<strong>${total}</strong> consolidation${total === 1 ? '' : 's'} suggested · <span style="color:#0a7d3c;">${high} HIGH</span>, <span style="color:#a60;">${med} MEDIUM</span>, <span style="color:var(--text-muted);">${low} LOW</span> · <strong>${sel.length}</strong> selected (${selEvs} event${selEvs === 1 ? '' : 's'} would be updated)`;
+
+  const q = ((document.getElementById('loc-cons-filter') || {}).value || '').toLowerCase().trim();
+  let rows = _consProposals.slice().sort((a, b) => {
+    const rank = c => c === 'HIGH' ? 0 : c === 'MEDIUM' ? 1 : 2;
+    const r1 = rank(a.proposal.confidence), r2 = rank(b.proposal.confidence);
+    if (r1 !== r2) return r1 - r2;
+    return b.count - a.count;
+  });
+  if (q) rows = rows.filter(r => `${r.text} ${r.proposal.target}`.toLowerCase().includes(q));
+
+  if (!total) {
+    list.innerHTML = '<div style="padding:24px;text-align:center;color:#0a7d3c;font-size:14px;">✓ No consolidations to suggest. All non-canonical entries are too distinct from canonical places to safely auto-rename.</div>';
+    return;
+  }
+  if (!rows.length) {
+    list.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted);">No suggestions match the filter.</div>';
+    return;
+  }
+
+  const escAttr = s => s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  const escHtml = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  list.innerHTML = rows.map(r => {
+    const conf = r.proposal.confidence;
+    const badgeColor = conf === 'HIGH' ? '#0a7d3c' : conf === 'MEDIUM' ? '#a60' : '#666';
+    const tooltip = `Jaccard ${r.proposal.jaccard} · Levenshtein ${r.proposal.levenshtein}`;
+    return `<div style="border-bottom:1px solid var(--border);padding:9px 12px;display:flex;align-items:center;gap:10px;background:${r.selected ? 'rgba(10,125,60,0.07)' : 'transparent'};">
+      <input type="checkbox" ${r.selected ? 'checked' : ''} onchange='locConsToggleSelected(${JSON.stringify(r.text)})' style="accent-color:var(--maroon);">
+      <span title="${tooltip}" style="display:inline-block;font-size:10px;background:${badgeColor};color:#fff;padding:2px 6px;border-radius:2px;font-weight:700;letter-spacing:0.04em;min-width:64px;text-align:center;">${conf}</span>
+      <span style="flex:2;font-size:13px;color:var(--text-body);overflow:hidden;text-overflow:ellipsis;">"${escHtml(r.text)}" <span style="color:var(--text-muted);font-size:11px;">(${r.count} event${r.count === 1 ? '' : 's'})</span></span>
+      <span style="color:var(--text-muted);font-size:14px;">→</span>
+      <span style="flex:2;font-size:13px;color:var(--maroon-deep);font-weight:600;overflow:hidden;text-overflow:ellipsis;">"${escHtml(r.proposal.target)}"</span>
+    </div>`;
+  }).join('');
+}
+
+function locConsApplySelected() {
+  const sel = _consProposals.filter(r => r.selected);
+  const status = document.getElementById('loc-cons-status');
+  const setStatus = (txt, color) => {
+    if (!status) return;
+    status.style.display = 'inline-flex';
+    status.style.color = color || 'var(--text-body)';
+    status.innerHTML = txt;
+  };
+
+  if (!sel.length) { setStatus('✕ Nothing selected.', '#a33'); return; }
+
+  const totalEvs = sel.reduce((a, r) => a + r.count, 0);
+  if (!confirm(`Apply ${sel.length} consolidation${sel.length === 1 ? '' : 's'} to ${totalEvs} event${totalEvs === 1 ? '' : 's'}?`)) {
+    setStatus('Cancelled.', 'var(--text-muted)');
+    return;
+  }
+
+  setStatus(`Applying ${sel.length} consolidation${sel.length === 1 ? '' : 's'}...`, 'var(--text-body)');
+  console.log(`[consolidation] starting apply of ${sel.length} proposals affecting ${totalEvs} event(s)`);
+
+  let updated = 0, applied = 0;
+  try {
+    for (const r of sel) {
+      const newText = r.proposal.target;
+      let n = 0;
+      events.forEach(e => { if (e.location === r.text) { e.location = newText; n++; } });
+      if (n > 0) {
+        _audit('event-location-rename', `consolidate: "${r.text}" -> "${newText}" on ${n} events`);
+        for (let i = 0; i < n; i++) _markEventsDirty();
+        updated += n;
+        applied++;
+        // Mark this proposal as applied in the in-memory list so the wizard
+        // visibly reflects what just happened on next render.
+        r.appliedAt = Date.now();
+        r.selected = false;
+      } else {
+        console.warn(`[consolidation] no events matched "${r.text}" — perhaps already renamed`);
+        r.skipped = true;
+      }
+    }
+  } catch (e) {
+    console.error('[consolidation] apply failed:', e);
+    setStatus(`✕ Apply failed: ${e.message || e} (see dev console)`, '#a33');
+    return;
+  }
+
+  // Show the result FIRST so it's visible even if a downstream render call
+  // throws (one bad render shouldn't hide the success message).
+  setStatus(
+    `<span style="color:#0a7d3c;font-weight:600;">✓ Applied ${applied} of ${sel.length} consolidation${sel.length === 1 ? '' : 's'} - ${updated} event${updated === 1 ? '' : 's'} renamed.</span> &nbsp; Click 💾 Save events.json to disk to persist.`,
+    'var(--text-body)'
+  );
+  console.log(`[consolidation] done: ${applied} of ${sel.length} proposals applied; ${updated} events renamed`);
+
+  // Drop applied proposals from the in-memory list so re-running the wizard is clean.
+  _consProposals = _consProposals.filter(r => !r.appliedAt);
+
+  try { buildLocationDatalist(); } catch (e) { console.error('[consolidation] buildLocationDatalist failed:', e); }
+  try { locConsRender(); } catch (e) { console.error('[consolidation] locConsRender failed:', e); }
+  try { renderLocationsList(); } catch (e) { console.error('[consolidation] renderLocationsList failed:', e); }
+  try { if (typeof renderManageList === 'function') renderManageList(1); } catch (e) { console.error('[consolidation] renderManageList failed:', e); }
+}
+
+function locApplyCleanup(oldText, newText) {
+  if (!newText || newText === oldText) { alert('No change.'); return; }
+  const count = events.filter(e => e.location === oldText).length;
+  if (!confirm(`Replace polluted location text with "${newText}" on ${count} event(s)?`)) return;
+  let updated = 0;
+  events.forEach(e => { if (e.location === oldText) { e.location = newText; updated++; } });
+  if (updated > 0) {
+    _audit('event-location-rename', `cleanup: "${oldText}" -> "${newText}" on ${updated} events`);
+    for (let i = 0; i < updated; i++) _markEventsDirty();
+  }
+  buildLocationDatalist();
+  renderLocationsList();
+  renderManageList && renderManageList(1);
+  alert(`Updated ${updated} event(s). Click "💾 Save events.json to disk" to persist.`);
+}
+
+function locPromoteFromText(text) {
+  const bareName = (text || '').split(',')[0].trim().toLowerCase();
+  const trailingCountry = (text || '').includes(',') ? text.split(',').slice(-1)[0].trim() : '';
+  const f = document.getElementById('loc-add-form');
+  const escHtml = s => String(s).replace(/</g,'&lt;');
+  f.innerHTML = `<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;font-weight:600;">+ Add canonical place (from event text "${escHtml(text)}")</div>` + _locFormHtml({
+    name: bareName, lat: '', lng: '', country: trailingCountry, region: ''
+  });
+  f.style.display = 'block';
+  document.getElementById('loc-f-lat').focus();
+  f.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function locShowAliasFromText(text) {
+  const bareName = (text || '').split(',')[0].trim().toLowerCase();
+  const f = document.getElementById('loc-add-form');
+  const escHtml = s => String(s).replace(/</g,'&lt;');
+  f.innerHTML = `<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;font-weight:600;">↪ Map "${escHtml(text)}" as alias of an existing canonical place</div>` + _locAliasFormHtml({ alias: bareName, canonical: '' });
+  f.style.display = 'block';
+  document.getElementById('loc-fa-canon').focus();
+  f.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function locShowRenameFromText(oldText) {
+  const f = document.getElementById('loc-add-form');
+  const escHtml = s => String(s).replace(/</g,'&lt;');
+  const escAttr = s => String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+  const count = events.filter(e => e.location === oldText).length;
+  f.innerHTML = `<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;font-weight:600;">✎ Rename "${escHtml(oldText)}" on every event that uses it (<strong>${count}</strong> event${count === 1 ? '' : 's'} affected)</div>
+    <div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap;">
+      <div style="flex:1;min-width:240px;"><label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:2px;">New location text (will replace the old text on all ${count} event${count === 1 ? '' : 's'})</label><input id="loc-rename-input" type="text" data-autocomplete="location" value="${escAttr(oldText)}" placeholder="e.g. Ahmedabad, India" style="width:100%;padding:6px 8px;border:1px solid var(--border-strong);border-radius:3px;background:var(--cream);font-family:'Lato',sans-serif;font-size:13px;"></div>
+      <div style="display:flex;gap:6px;">
+        <button class="save-btn" style="padding:6px 12px;" onclick='locApplyRename(${JSON.stringify(oldText)})'>✓ Replace on ${count} event${count === 1 ? '' : 's'}</button>
+        <button class="save-btn" style="padding:6px 12px;background:transparent;color:var(--maroon-deep);border:1px solid var(--border-strong);" onclick="locCancelForm()">Cancel</button>
+      </div>
+    </div>`;
+  f.style.display = 'block';
+  document.getElementById('loc-rename-input').focus();
+  f.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function locClearFromEvents(oldText) {
+  console.log(`[locClearFromEvents] called with oldText:`, JSON.stringify(oldText));
+  const count = events.filter(e => e.location === oldText).length;
+  console.log(`[locClearFromEvents] ${count} event(s) currently have this exact location text`);
+  if (!count) {
+    alert(`No events currently use "${oldText}" exactly.\n\nThis can happen if a previous rename/cleanup already changed it. The non-canonical list will refresh now.`);
+    try { renderLocationsList(); } catch (e) { console.error(e); }
+    return;
+  }
+  if (!confirm(`Clear the location field (set to empty) on ${count} event${count === 1 ? '' : 's'} that use "${oldText}"?\n\nThe events will then show no location at all. Use this when the text is description rather than a real place.`)) {
+    console.log('[locClearFromEvents] user cancelled');
+    return;
+  }
+  let cleared = 0;
+  try {
+    events.forEach(e => { if (e.location === oldText) { e.location = ''; cleared++; } });
+    if (cleared > 0) {
+      _audit('event-location-clear', `"${oldText}" cleared on ${cleared} events`);
+      for (let i = 0; i < cleared; i++) _markEventsDirty();
+    }
+  } catch (e) {
+    console.error('[locClearFromEvents] failed during clear:', e);
+    alert('Clear failed: ' + (e.message || e) + ' (see dev console)');
+    return;
+  }
+  console.log(`[locClearFromEvents] cleared ${cleared} event location(s)`);
+  try { buildLocationDatalist(); } catch (e) { console.error('[locClearFromEvents] buildLocationDatalist failed:', e); }
+  try { renderLocationsList(); } catch (e) { console.error('[locClearFromEvents] renderLocationsList failed:', e); }
+  try { if (typeof renderManageList === 'function') renderManageList(1); } catch (e) { console.error('[locClearFromEvents] renderManageList failed:', e); }
+  alert(`Cleared location on ${cleared} event(s). Click "💾 Save events.json to disk" to persist.`);
+}
+
+function locApplyRename(oldText) {
+  const newText = (document.getElementById('loc-rename-input').value || '').trim();
+  if (!newText) { alert('New location is required.'); return; }
+  if (newText === oldText) { alert('No change.'); return; }
+  let updated = 0;
+  events.forEach(e => { if (e.location === oldText) { e.location = newText; updated++; } });
+  if (updated > 0) {
+    _audit('event-location-rename', `"${oldText}" -> "${newText}" on ${updated} events`);
+    for (let i = 0; i < updated; i++) _markEventsDirty();
+  }
+  buildLocationDatalist();
+  locCancelForm();
+  renderLocationsList();
+  renderManageList && renderManageList(1);
+  alert(`Updated ${updated} event(s). Click "💾 Save events.json to disk" to persist.`);
+}
+
 function buildLocationDatalist() {
   // Refresh both the native datalist (for any future browser fallback) and the
-  // custom autocomplete cache.
+  // custom autocomplete cache. _locAcAllOptions() returns {value,country,region}
+  // objects, so pull the .value off each before rendering as <option>.
   const items = _locAcAllOptions();
   _locAcCache = items;
   const dl = document.getElementById('known-locations');
-  if (dl) dl.innerHTML = items.map(s => `<option value="${s.replace(/"/g, '&quot;')}">`).join('');
+  if (dl) dl.innerHTML = items.map(o => `<option value="${String(o.value || '').replace(/"/g, '&quot;')}">`).join('');
 }
 
 // ── Custom location autocomplete ─────────────────────
 // Each option: { value: "Sarangpur, India", country: "India", region: "Gujarat" }.
 // The dropdown groups by country (and region within India) so users who don't
 // know the spelling can scroll-browse visually.
+// Heuristic: free-text event-location strings that look like description rather
+// than a place name. Excluded from the autocomplete dropdown but still surfaced
+// in the Locations admin "non-canonical" section so the user can clean them up.
+function _looksLikePollutedLocation(text) {
+  if (!text) return true;
+  const t = String(text).trim();
+  if (t.length > 60) return true;
+  if (/[\/|;]/.test(t)) return true;          // multi-value separators
+  if (t.split(',').length > 3) return true;   // > 2 commas implies extra text
+  return false;
+}
+
 function _locAcAllOptions() {
   const map = new Map(); // value -> { country, region }
   const titled = k => k.replace(/\b\w/g, c => c.toUpperCase());
@@ -8851,9 +9834,12 @@ function _locAcAllOptions() {
   // Existing event-location strings — only add if they bring NEW info beyond
   // what's already covered by canonical/alias entries. Avoids duplicates like
   // "Loj" vs "Loj, India" or "Ahmedabad" vs "Ahmedabad, India".
+  // Polluted entries (description text, multi-value, very long) are filtered
+  // out — they still live on events but shouldn't pollute the dropdown.
   const norm = s => s.toLowerCase().replace(/\s+/g, ' ').trim();
   events.forEach(e => {
     if (!e.location) return;
+    if (_looksLikePollutedLocation(e.location)) return;  // skip polluted free-text
     const meta = _mapLookup(e.location);
     if (!meta) {
       addOpt(e.location, 'Other (in your events)', '');
@@ -8917,8 +9903,17 @@ function _locAcShow() {
   } else {
     filtered = _locAcCache;
   }
-  if (!filtered.length) { _locAcHide(); return; }
 
+  // Map page search box: respect the page's Country/Region filters so
+  // typing into the map's search doesn't surface places from other regions.
+  if (target.id === 'map-search') {
+    const cEl = document.getElementById('map-country');
+    const rEl = document.getElementById('map-region');
+    const c = cEl ? cEl.value.trim() : '';
+    const r = rEl ? rEl.value.trim() : '';
+    if (c) filtered = filtered.filter(o => o.country === c);
+    if (r) filtered = filtered.filter(o => (o.region || '') === r);
+  }
   const rect = target.getBoundingClientRect();
   dd.style.left  = `${rect.left}px`;
   dd.style.top   = `${rect.bottom + 2}px`;
@@ -8934,6 +9929,11 @@ function _locAcShow() {
     if (idx < 0) return s.replace(/</g, '&lt;');
     return `${s.slice(0, idx).replace(/</g,'&lt;')}<strong style="background:rgba(201,146,42,0.35);">${s.slice(idx, idx + query.length).replace(/</g,'&lt;')}</strong>${s.slice(idx + query.length).replace(/</g,'&lt;')}`;
   };
+
+  if (!filtered.length) {
+    dd.innerHTML = `<div style="padding:10px 12px;font-size:12px;color:var(--text-muted);font-style:italic;">No matches for "${(query || '').replace(/</g,'&lt;')}" — keep typing or clear the input</div>`;
+    return;
+  }
 
   // When NOT searching, render with section headers grouped by country (and
   // by region inside India). When searching, headers are inserted only when
@@ -9001,7 +10001,13 @@ let _locAcInteracting = false;
     }
   });
   document.addEventListener('input', e => {
-    if (e.target === _locAcTarget) _locAcShow();
+    // Re-arm target on every keystroke. Fixes the case where a no-match query
+    // hid the dropdown (clearing _locAcTarget), and the user then types a
+    // correction expecting the list to come back.
+    if (e.target.matches && e.target.matches('[data-autocomplete="location"]')) {
+      _locAcTarget = e.target;
+      _locAcShow();
+    }
   });
   document.addEventListener('keydown', e => {
     if (e.target !== _locAcTarget) return;
