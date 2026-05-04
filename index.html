@@ -1931,6 +1931,7 @@ nav {
         <input type="text" id="ml-bulk" data-autocomplete="location" placeholder="Location to apply" style="background:var(--cream-dark);border:1px solid var(--border-strong);color:var(--text-dark);font-family:'Lato',sans-serif;font-size:12px;height:28px;padding:0 8px;border-radius:2px;width:220px;">
         <button class="save-btn" style="padding:4px 10px;font-size:11px;min-width:auto;" onclick="mlBulkApply()" title="Set this location on every event currently shown">✓ Apply to all visible</button>
       </label>
+      <button class="save-btn" style="padding:4px 10px;font-size:11px;min-width:auto;background:linear-gradient(135deg,var(--gold-dim),var(--gold));color:var(--maroon-deep);" onclick="locOpenIndexModal('freetext')" title="Open Location Index pre-filtered to free-text entries — clean up rogue values that clutter this dropdown">🛠 Edit list</button>
       <span style="margin-left:auto;font-size:11px;color:var(--text-muted);">Tip: Rows tagged <span style="background:var(--gold);color:var(--maroon-deep);padding:0 4px;border-radius:2px;font-weight:700;font-size:10px;">SUGGESTED</span> have a guess pre-filled — click ✓ Apply to accept, or edit first.</span>
     </div>
     <hr style="border:none;border-bottom:1px solid var(--border);margin-bottom:12px;">
@@ -1965,6 +1966,46 @@ nav {
         <button onclick="saveEventsToDiskFromModal('bl-dirty')" class="save-btn" style="background:linear-gradient(135deg,var(--gold-dim),var(--gold));color:var(--maroon-deep);" title="Persist all location updates to events.json on disk">💾 Save events.json to disk</button>
         <button onclick="closeBadLocationsModal()" class="save-btn" style="background:transparent;color:var(--maroon-deep);border:1px solid var(--border-strong);">Close</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── LOCATION INDEX MODAL (every location string used by an event) ── -->
+<div id="loc-idx-modal" style="display:none;position:fixed;inset:0;background:rgba(20,5,5,0.85);z-index:3100;align-items:center;justify-content:center;backdrop-filter:blur(4px);" onclick="if(event.target===this)locCloseIndexModal()">
+  <div style="background:var(--cream);padding:24px;border-radius:4px;border:1px solid var(--border-strong);max-width:1200px;width:calc(100% - 32px);max-height:92vh;display:flex;flex-direction:column;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <h3 style="font-family:'Cinzel',serif;color:var(--maroon-deep);margin:0;font-size:18px;">📍 Location Index — every location used by events</h3>
+      <button onclick="locCloseIndexModal()" style="background:transparent;border:none;font-size:20px;color:var(--maroon-deep);cursor:pointer;">✕</button>
+    </div>
+    <p style="font-size:12px;color:var(--text-muted);margin:0 0 10px;line-height:1.6;">
+      Lists every distinct location string currently on at least one event — exactly what populates the autocomplete dropdown on the Map page and the Fill Missing Locations modal. Click 👁 to open the first source event, or 📋 to filter Manage Events to that location's events. Per-row actions let you clean up rogue entries without leaving this modal.
+    </p>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
+      <input type="text" id="loc-idx-filter" oninput="renderLocationIndex()" placeholder="Filter by text or canonical key…" style="background:var(--cream-dark);border:1px solid var(--border-strong);color:var(--text-dark);font-family:'Lato',sans-serif;font-size:12px;height:30px;padding:0 10px;border-radius:2px;flex:1;min-width:240px;">
+      <select id="loc-idx-type-filter" onchange="renderLocationIndex()" style="background:var(--cream-dark);border:1px solid var(--border-strong);color:var(--text-dark);font-size:12px;height:30px;padding:0 8px;border-radius:2px;cursor:pointer;">
+        <option value="all">All entries</option>
+        <option value="canonical">Canonical only</option>
+        <option value="alias">Alias only</option>
+        <option value="freetext">Free-text (non-canonical) only</option>
+        <option value="legacy">Free-text that DOESN'T plot on the map</option>
+      </select>
+      <select id="loc-idx-sort" onchange="renderLocationIndex()" style="background:var(--cream-dark);border:1px solid var(--border-strong);color:var(--text-dark);font-size:12px;height:30px;padding:0 8px;border-radius:2px;cursor:pointer;">
+        <option value="count-desc">Most-used first</option>
+        <option value="count-asc">Least-used first</option>
+        <option value="name-asc">A-Z</option>
+        <option value="name-desc">Z-A</option>
+      </select>
+      <button class="save-btn" style="padding:5px 12px;font-size:11px;min-width:auto;background:linear-gradient(135deg,var(--gold-dim),var(--gold));color:var(--maroon-deep);" onclick="locUnifyTextVariants()" title="Find every group of text variants that all plot at the same canonical place (e.g., 'London, UK' + 'London') and rewrite them to a single 'Title, Country' form in one batch.">🔀 Unify text variants</button>
+    </div>
+    <p id="loc-idx-summary" style="font-size:12px;color:var(--text-body);margin:0 0 6px;"></p>
+    <hr style="border:none;border-bottom:1px solid var(--border);margin-bottom:0;">
+    <div id="loc-idx-list" style="overflow-y:auto;flex:1;border:1px solid var(--border);border-top:none;background:var(--cream);"></div>
+    <hr style="border:none;border-top:1px solid var(--border);margin-top:0;margin-bottom:12px;">
+    <div style="display:flex;gap:8px;justify-content:flex-end;align-items:center;flex-wrap:wrap;">
+      <span id="loc-idx-evdirty" style="margin-right:auto;font-size:12px;color:#a33;font-weight:600;display:none;"></span>
+      <button class="save-btn" style="background:linear-gradient(135deg,var(--gold-dim),var(--gold));color:var(--maroon-deep);" onclick="saveEventsToDiskFromModal('loc-idx-evdirty')" title="Persist Rename/Clear/Merge changes to events.json">💾 Save events.json</button>
+      <button class="save-btn" style="background:linear-gradient(135deg,var(--gold-dim),var(--gold));color:var(--maroon-deep);" onclick="saveLocationsToDisk()" title="Persist canonical/alias changes to locations.json">💾 Save locations.json</button>
+      <button onclick="locCloseIndexModal()" class="save-btn" style="background:transparent;color:var(--maroon-deep);border:1px solid var(--border-strong);">Close</button>
     </div>
   </div>
 </div>
@@ -2043,6 +2084,7 @@ nav {
         <input type="text" id="map-search" data-autocomplete="location" oninput="renderMap()" placeholder="Place name…" style="background:var(--cream-dark);border:1px solid var(--border-strong);color:var(--text-dark);font-family:'Lato',sans-serif;font-size:12px;height:30px;padding:0 8px;border-radius:2px;width:160px;">
       </label>
       <button class="guru-pill" onclick="resetMapFilters()" style="margin-left:auto;">Reset</button>
+      <button id="map-manage-locs" class="guru-pill" onclick="locOpenIndexModal('freetext')" style="display:none;background:linear-gradient(135deg,var(--gold-dim),var(--gold));color:var(--maroon-deep);" title="Admin: open the Location Index pre-filtered to free-text entries (the ones cluttering this dropdown)">🛠 Edit list</button>
     </div>
     <p id="map-summary" style="font-size:13px;color:var(--text-muted);margin-bottom:10px;"></p>
     <div id="map-canvas" style="width:100%;height:600px;border:1px solid var(--border-strong);border-radius:3px;background:var(--cream-dark);"></div>
@@ -2180,7 +2222,10 @@ nav {
           </div>
           <div class="form-field">
             <label class="form-label">Location</label>
-            <input type="text" class="form-input" id="af-location" placeholder="City, Country" data-autocomplete="location">
+            <select class="form-select" id="af-location" onchange="_onEventLocSelectChange('af-location')" title="Pick from canonical places. Choose '+ Add new place...' to add a new one (auto-geocoded).">
+              <option value="">— no location —</option>
+              <option disabled>(loading...)</option>
+            </select>
           </div>
           <div class="form-field" style="grid-column:1/-1">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
@@ -2484,7 +2529,10 @@ nav {
           <input type="text" id="loc-filter" oninput="renderLocationsList()" placeholder="Filter by name / country / region…" style="background:var(--cream-dark);border:1px solid var(--border-strong);color:var(--text-dark);font-family:'Lato',sans-serif;font-size:13px;height:32px;padding:0 10px;border-radius:2px;flex:1;min-width:240px;">
           <button class="save-btn" onclick="locShowAddForm()">+ Add place</button>
           <button class="save-btn" onclick="locShowAddAliasForm()">+ Add alias</button>
-          <button class="save-btn" style="background:linear-gradient(135deg,var(--gold-dim),var(--gold));color:var(--maroon-deep);" onclick="saveLocationsToDisk()" title="Write directly to locations.json on disk. First click asks once; after that it's instant.">💾 Save locations.json to disk</button>
+          <button class="save-btn" style="background:linear-gradient(135deg,var(--gold-dim),var(--gold));color:var(--maroon-deep);" onclick="locOpenIndexModal()" title="Browse every location string currently on events. Find rogue entries, see source events, and clean up.">📍 Location Index</button>
+          <button class="save-btn" style="background:linear-gradient(135deg,var(--gold-dim),var(--gold));color:var(--maroon-deep);" onclick="saveLocationsToDisk()" title="Write directly to locations.json on disk. Persists ONLY canonical places + aliases.">💾 Save locations.json</button>
+          <button class="save-btn" style="background:linear-gradient(135deg,var(--gold-dim),var(--gold));color:var(--maroon-deep);" onclick="saveEventsToDiskFromModal('loc-tab-evdirty')" title="Write directly to events.json on disk. Persists Rename/Clear/Merge changes to event location text.">💾 Save events.json</button>
+          <span id="loc-tab-evdirty" style="font-size:12px;color:#a33;font-weight:600;display:none;"></span>
           <button class="save-btn" style="background:transparent;color:var(--maroon-deep);border:1px solid var(--border-strong);padding:6px 10px;font-size:11px;min-width:auto;" onclick="resetFsaHandle('locations.json', 'fsa-locations-status')" title="Forget the linked file. Next save will prompt you to pick a file again.">↻ Re-link</button>
           <span id="fsa-locations-status" style="font-size:12px;color:var(--text-muted);"></span>
           <button class="save-btn" style="background:transparent;color:var(--maroon-deep);border:1px solid var(--border-strong);" onclick="exportLocationsJson()" title="Download a copy to Downloads folder">⬇ Export (downloads copy)</button>
@@ -2524,7 +2572,7 @@ nav {
               <input type="checkbox" id="loc-noncanon-resolves-only" onchange="renderNonCanonicalLocations()" style="accent-color:var(--maroon);"> Plots on map only
             </label>
           </div>
-          <div id="loc-noncanon-wrap" style="max-height:40vh;overflow-y:auto;border:1px solid var(--border);border-radius:3px;background:var(--cream);">
+          <div id="loc-noncanon-wrap" style="max-height:40vh;overflow-y:auto;border:1px solid var(--border);border-radius:3px;background:var(--cream);" data-section="noncanon">
             <table style="width:100%;border-collapse:collapse;font-size:12px;">
               <thead style="position:sticky;top:0;background:var(--maroon-dark);color:var(--gold-light);">
                 <tr>
@@ -2535,6 +2583,34 @@ nav {
                 </tr>
               </thead>
               <tbody id="loc-noncanon-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div style="margin-top:22px;padding-top:18px;border-top:1px solid var(--border);">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap;">
+            <h4 style="font-family:'Cinzel',serif;color:var(--maroon-deep);margin:0;font-size:14px;">Canonical places not used by any event</h4>
+            <span id="loc-orphan-summary" style="font-size:12px;color:var(--text-muted);"></span>
+            <span style="margin-left:auto;font-size:11px;color:var(--text-muted);font-style:italic;">These appear in the master list but no event resolves to them. Safe to delete unless you're keeping them for future events.</span>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
+            <input type="text" id="loc-orphan-filter" oninput="renderOrphanCanonicals()" placeholder="Filter by name / country / region…" style="background:var(--cream-dark);border:1px solid var(--border-strong);color:var(--text-dark);font-family:'Lato',sans-serif;font-size:12px;height:30px;padding:0 10px;border-radius:2px;flex:1;min-width:240px;">
+            <button class="save-btn" style="padding:5px 12px;font-size:11px;min-width:auto;color:#a33;background:transparent;border:1px solid rgba(160,40,40,0.5);" onclick="locDeleteAllOrphans()" title="Delete every canonical place that no event references. Confirms with a count first.">🗑 Delete all orphans</button>
+          </div>
+          <div id="loc-orphan-wrap" style="max-height:40vh;overflow-y:auto;border:1px solid var(--border);border-radius:3px;background:var(--cream);">
+            <table style="width:100%;border-collapse:collapse;font-size:12px;">
+              <thead style="position:sticky;top:0;background:var(--maroon-dark);color:var(--gold-light);">
+                <tr>
+                  <th style="padding:8px 10px;text-align:left;">Name (key)</th>
+                  <th style="padding:8px 10px;text-align:right;width:80px;">Lat</th>
+                  <th style="padding:8px 10px;text-align:right;width:80px;">Lng</th>
+                  <th style="padding:8px 10px;text-align:left;width:120px;">Country</th>
+                  <th style="padding:8px 10px;text-align:left;width:140px;">Region/State</th>
+                  <th style="padding:8px 10px;text-align:left;width:160px;">Aliases pointing here</th>
+                  <th style="padding:8px 10px;width:80px;"></th>
+                </tr>
+              </thead>
+              <tbody id="loc-orphan-tbody"></tbody>
             </table>
           </div>
         </div>
@@ -2684,7 +2760,10 @@ nav {
       </div>
       <div>
         <label style="display:block;font-size:12px;font-weight:bold;color:var(--maroon-deep);margin-bottom:4px;">Location</label>
-        <input id="eem-location" type="text" placeholder="e.g. Ahmedabad, India" data-autocomplete="location" style="width:100%;box-sizing:border-box;padding:6px 8px;border:1px solid var(--border-strong);border-radius:3px;font-size:13px;background:var(--cream);">
+        <select id="eem-location" onchange="_onEventLocSelectChange('eem-location')" style="width:100%;box-sizing:border-box;padding:6px 8px;border:1px solid var(--border-strong);border-radius:3px;font-size:13px;background:var(--cream);" title="Pick from canonical places. Choose '+ Add new place...' to add a new one (auto-geocoded).">
+          <option value="">— no location —</option>
+          <option disabled>(loading...)</option>
+        </select>
       </div>
     </div>
 
@@ -3295,7 +3374,6 @@ function renderToday() {
     document.getElementById('month-display').textContent = `VS ${ti.samvat}`;
     const extraBits = [];
     if (ti.ashadhi_samvat) extraBits.push(`Ashadhi VS ${ti.ashadhi_samvat}`);
-    if (ti.tithi_order) extraBits.push(`Tithi #${ti.tithi_order}`);
     document.getElementById('tithi-extra').textContent = extraBits.join(' · ');
   } else {
     document.getElementById('tithi-display').textContent = 'N/A';
@@ -4261,6 +4339,16 @@ if (!_MAP_LOCATIONS['udaipur'])   { _MAP_LOCATIONS['udaipur']   = [24.5854, 73.7
 
 function _mapLookup(loc) {
   if (!loc) return null;
+  // Full-text alias hit (allows multi-segment aliases like
+  // "robbinsville, new jersey, usa" → canonical "robbinsville").
+  const full = String(loc).trim().toLowerCase().replace(/\s+/g, ' ');
+  if (_LOCATION_ALIASES[full]) {
+    const k = _LOCATION_ALIASES[full];
+    if (_MAP_LOCATIONS[k]) {
+      const meta = _locMeta(k);
+      return { lat: _MAP_LOCATIONS[k][0], lng: _MAP_LOCATIONS[k][1], country: meta.country, region: meta.region, key: k };
+    }
+  }
   const parts = loc.split(',').map(p => p.trim().toLowerCase());
   for (const p of parts) {
     // Direct hit
@@ -4625,6 +4713,9 @@ function _populateMapFilters(plottable) {
 
 async function renderMap() {
   await _ensureLeaflet();
+  // Show the admin-only "🛠 Edit list" button when an admin is logged in.
+  const mml = document.getElementById('map-manage-locs');
+  if (mml) mml.style.display = (typeof isAdmin !== 'undefined' && isAdmin) ? 'inline-flex' : 'none';
   const visible = visibleEvents();
 
   // Compute meta per visible event.
@@ -5378,7 +5469,7 @@ function switchAdminTab(name) {
   if (name === 'export')    renderStats();
   if (name === 'analytics') renderAnalytics();
   if (name === 'password') { document.getElementById('pw-current').value=''; document.getElementById('pw-new').value=''; document.getElementById('pw-confirm').value=''; document.getElementById('pw-msg').textContent=''; }
-  if (name === 'locations') renderLocationsList();
+  if (name === 'locations') { renderLocationsList(); if (typeof _refreshDirtyIndicators === 'function') _refreshDirtyIndicators(); }
   if (name === 'threads')   renderThreadsAdmin();
   if (name === 'audit')     renderAuditLog();
   if (name === 'backup')    renderBackupTab();
@@ -5804,7 +5895,11 @@ function openEditModal(evId) {
   if (!ev) return;
 
   document.getElementById('eem-date').value = ev.date || '';
-  document.getElementById('eem-location').value = ev.location || '';
+  // Rebuild the canonical-only select with the event's current location preselected.
+  // Legacy / non-canonical values surface as a "⚠ LEGACY" option so they're not silently lost.
+  _refreshEventLocSelect('eem-location', ev.location || '');
+  const eemSel = document.getElementById('eem-location');
+  if (eemSel) eemSel.dataset.lastValue = eemSel.value;
   document.getElementById('eem-desc').value     = ev.desc    || '';
   document.getElementById('eem-desc-gu').value  = ev.desc_gu || '';
   document.getElementById('eem-desc-hi').value  = ev.desc_hi || '';
@@ -7717,9 +7812,9 @@ function _clearEventsDirty() {
 }
 function _refreshDirtyIndicators() {
   const txt = _eventsDirty
-    ? `⚠ ${_eventsDirty} unsaved change${_eventsDirty === 1 ? '' : 's'} - click Save below`
+    ? `⚠ ${_eventsDirty} unsaved event change${_eventsDirty === 1 ? '' : 's'} — click Save events.json`
     : '';
-  ['ml-dirty', 'bl-dirty'].forEach(id => {
+  ['ml-dirty', 'bl-dirty', 'loc-tab-evdirty', 'loc-idx-evdirty'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     el.textContent = txt;
@@ -7807,8 +7902,37 @@ async function saveLocationsToDisk() {
   const aliases = Object.entries(_LOCATION_ALIASES).sort((a, b) => a[0].localeCompare(b[0]))
     .map(([alias, canonical]) => ({ alias, canonical }));
   const content = JSON.stringify({ places, aliases }, null, 2);
+
+  console.log(`[saveLocationsToDisk] writing ${places.length} place(s) and ${aliases.length} alias(es) (content ${content.length.toLocaleString()} chars)`);
+
   const ok = await _fsaSaveJson('locations.json', 'locations.json', () => content, 'fsa-locations-status');
-  if (ok) _audit('save-locations-to-disk', `${places.length} places, ${aliases.length} aliases`);
+  if (ok) {
+    _audit('save-locations-to-disk', `${places.length} places, ${aliases.length} aliases`);
+    console.log(`[saveLocationsToDisk] write reported success`);
+
+    // Verify the file we just wrote actually contains what we sent. Live
+    // Server may reload the page on file change AND the browser may serve
+    // a cached copy of locations.json — so we read back from the FS Access
+    // handle (no HTTP cache involved) and compare the place count.
+    try {
+      const handle = await _fsaGetHandle('locations.json');
+      if (handle) {
+        const file = await handle.getFile();
+        const onDisk = JSON.parse(await file.text());
+        const onDiskPlaces = Array.isArray(onDisk.places) ? onDisk.places.length : 0;
+        if (onDiskPlaces !== places.length) {
+          console.error(`[saveLocationsToDisk] MISMATCH! Wrote ${places.length} places but file on disk has ${onDiskPlaces}. The FS Access handle is probably linked to a DIFFERENT locations.json than the one being fetched on reload.`);
+          alert(`⚠ Save mismatch detected.\n\nIn-memory: ${places.length} places\nWritten file: ${onDiskPlaces} places\n\nThe linked file is likely not the one Live Server is serving. Click "↻ Re-link" next to the Save button, then re-pick the locations.json at the project root, then save again.`);
+        } else {
+          console.log(`[saveLocationsToDisk] verified: file on disk has ${onDiskPlaces} places (matches)`);
+        }
+      }
+    } catch (e) {
+      console.warn(`[saveLocationsToDisk] verify-read failed (not critical):`, e);
+    }
+  } else {
+    console.warn(`[saveLocationsToDisk] write returned false (cancelled or denied)`);
+  }
 }
 
 // On page load, populate the status pills with current handle state.
@@ -8287,7 +8411,7 @@ document.addEventListener('keydown', e => {
 // ═══════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════
-fetch('events.json')
+fetch(`events.json?_t=${Date.now()}`, { cache: 'no-store' })
   .then(r => r.json())
   .then(data => {
     if (Array.isArray(data)) {
@@ -8339,6 +8463,8 @@ fetch('events.json')
                 setTimeout(openMissingLocationsModal, 80);
               } else if (savedModal === 'bl' && typeof openBadLocationsModal === 'function') {
                 setTimeout(openBadLocationsModal, 80);
+              } else if (savedModal === 'idx' && typeof locOpenIndexModal === 'function') {
+                setTimeout(locOpenIndexModal, 80);
               }
             } catch (e) {}
           }
@@ -8347,7 +8473,12 @@ fetch('events.json')
     } catch (e) {}
     setTimeout(() => renderGuruPanel(), 500);
     // Try to load locations.json if present; falls back silently to in-code defaults.
-    _loadLocationsJson().finally(buildLocationDatalist);
+    _loadLocationsJson().finally(() => {
+      try { buildLocationDatalist(); } catch (e) { console.warn(e); }
+      // Always populate the canonical-only event-location selects, even if the
+      // file load failed — the in-code defaults are still in _MAP_LOCATIONS.
+      try { _refreshAllEventLocSelects(); } catch (e) { console.warn(e); }
+    });
     // Deep-link: if URL has #event=evt-XXX, open that event's modal after data load.
     handleDeepLink();
   })
@@ -8374,6 +8505,11 @@ const _AUDIT_NO_BACKUP_ACTIONS = new Set([
   'event-location-rename',
   'event-location-clear',
   'event-location-undo',
+  'alias-create',
+  'alias-delete',
+  'locations-orphan-delete',
+  'canonical-merge',
+  'canonical-add-inline',
   'ai-edit-accept',
   'ai-edit-reject',
   'ai-edit-edited-accept',
@@ -9131,7 +9267,10 @@ function _renderThreadNavInModal(ev) {
 // ── Master location list editor ──────────────────────
 async function _loadLocationsJson() {
   try {
-    const r = await fetch('locations.json');
+    // Cache-buster forces a fresh read after a save. Without this, browser
+    // HTTP cache (or a stale Live Server inflight) can hand back the pre-save
+    // copy, making it look as if the save was undone.
+    const r = await fetch(`locations.json?_t=${Date.now()}`, { cache: 'no-store' });
     if (!r.ok) return;
     const data = await r.json();
     if (data && Array.isArray(data.places)) {
@@ -9156,6 +9295,15 @@ async function _loadLocationsJson() {
     _locAcCache = null;
     buildLocationDatalist();
     console.log(`Loaded ${Object.keys(_MAP_LOCATIONS).length} place(s) and ${Object.keys(_LOCATION_ALIASES).length} alias(es) from locations.json.`);
+    // Refresh the Locations admin tab if it's already rendered. This fixes a
+    // stale-render bug: switchAdminTab('locations') from sessionStorage runs
+    // BEFORE this async load completes, so the table shows the hardcoded
+    // defaults (~187) until something forces a re-render.
+    try { if (typeof renderLocationsList === 'function') renderLocationsList(); } catch (e) { console.warn(e); }
+    // Populate every event-location <select> on the page now that the canonical
+    // master list is loaded. Without this, Add Event / Edit Event keep showing
+    // the "(loading...)" placeholder.
+    try { if (typeof _refreshAllEventLocSelects === 'function') _refreshAllEventLocSelects(); } catch (e) { console.warn(e); }
   } catch (e) {
     // file missing or fetch blocked — silently fall back to in-code defaults.
   }
@@ -9203,32 +9351,37 @@ function renderLocationsList() {
 
   const rows = Object.keys(_MAP_LOCATIONS).map(name => {
     const meta = _locMeta(name);
-    return { name, lat: _MAP_LOCATIONS[name][0], lng: _MAP_LOCATIONS[name][1], country: meta.country, region: meta.region, aliases: (aliasesByCanonical[name] || []).join(', ') };
+    return { name, lat: _MAP_LOCATIONS[name][0], lng: _MAP_LOCATIONS[name][1], country: meta.country, region: meta.region, aliases: aliasesByCanonical[name] || [] };
   });
   const filtered = filter
-    ? rows.filter(r => `${r.name} ${r.country} ${r.region} ${r.aliases}`.toLowerCase().includes(filter))
+    ? rows.filter(r => `${r.name} ${r.country} ${r.region} ${r.aliases.join(' ')}`.toLowerCase().includes(filter))
     : rows;
   filtered.sort((a, b) => a.country.localeCompare(b.country) || (a.region || '').localeCompare(b.region || '') || a.name.localeCompare(b.name));
 
   sum.innerHTML = `<strong>${filtered.length}</strong> place(s) shown · <strong>${rows.length}</strong> total · <strong>${Object.keys(_LOCATION_ALIASES).length}</strong> alias(es).`;
 
   tbody.innerHTML = filtered.map(r => {
-    const esc = s => String(s || '').replace(/"/g, '&quot;');
+    const esc = s => String(s || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    const escHtml = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const aliasChips = r.aliases.length === 0 ? '<span style="color:var(--text-muted);font-style:italic;">—</span>' :
+      r.aliases.map(a => `<span style="display:inline-flex;align-items:center;gap:2px;background:var(--cream-dark);border:1px solid var(--border);border-radius:2px;padding:1px 2px 1px 6px;margin:1px 3px 1px 0;font-size:11px;font-family:monospace;color:var(--text-body);">${escHtml(a)}<button onclick="locDeleteAlias('${esc(a)}')" style="background:transparent;border:none;color:#a33;cursor:pointer;padding:0 4px;font-size:13px;line-height:1;" title="Delete this alias (events using it will be offered a rename to canonical)">×</button></span>`).join('');
     return `<tr data-loc="${esc(r.name)}" style="border-bottom:1px solid var(--border);">
-      <td style="padding:6px 10px;font-family:monospace;color:var(--maroon-deep);">${r.name.replace(/</g,'&lt;')}</td>
+      <td style="padding:6px 10px;font-family:monospace;color:var(--maroon-deep);">${escHtml(r.name)}</td>
       <td style="padding:6px 10px;text-align:right;font-family:monospace;">${r.lat.toFixed(4)}</td>
       <td style="padding:6px 10px;text-align:right;font-family:monospace;">${r.lng.toFixed(4)}</td>
-      <td style="padding:6px 10px;">${r.country}</td>
-      <td style="padding:6px 10px;color:var(--text-muted);">${r.region || ''}</td>
-      <td style="padding:6px 10px;font-size:11px;color:var(--text-muted);">${r.aliases.replace(/</g,'&lt;')}</td>
+      <td style="padding:6px 10px;">${escHtml(r.country)}</td>
+      <td style="padding:6px 10px;color:var(--text-muted);">${escHtml(r.region || '')}</td>
+      <td style="padding:6px 10px;font-size:11px;color:var(--text-muted);line-height:1.8;">${aliasChips}</td>
       <td style="padding:6px 6px;white-space:nowrap;">
-        <button class="save-btn" style="padding:3px 7px;font-size:11px;min-width:auto;" onclick="locEdit('${esc(r.name)}')" title="Edit">✎</button>
-        <button class="save-btn" style="padding:3px 7px;font-size:11px;min-width:auto;background:transparent;border:1px solid #a33;color:#a33;" onclick="locDelete('${esc(r.name)}')" title="Delete">✕</button>
+        <button class="save-btn" style="padding:3px 7px;font-size:11px;min-width:auto;" onclick="locEdit('${esc(r.name)}')" title="Edit this canonical entry">✎</button>
+        <button class="save-btn" style="padding:3px 7px;font-size:11px;min-width:auto;background:linear-gradient(135deg,var(--gold-dim),var(--gold));color:var(--maroon-deep);" onclick="locMergeCanonicalDialog('${esc(r.name)}')" title="Merge this canonical INTO another (events renamed, aliases re-pointed, this entry deleted)">🔀</button>
+        <button class="save-btn" style="padding:3px 7px;font-size:11px;min-width:auto;background:transparent;border:1px solid #a33;color:#a33;" onclick="locDelete('${esc(r.name)}')" title="Delete this canonical entry (and any aliases pointing at it)">✕</button>
       </td>
     </tr>`;
   }).join('') || '<tr><td colspan="7" style="padding:24px;text-align:center;color:var(--text-muted);">— No places match the filter —</td></tr>';
 
   renderNonCanonicalLocations();
+  renderOrphanCanonicals();
 }
 
 function _locFormHtml(values) {
@@ -9239,22 +9392,272 @@ function _locFormHtml(values) {
     <div><label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:2px;">Lng</label><input id="loc-f-lng" type="number" step="0.0001" value="${v.lng ?? ''}" style="width:100%;padding:6px 8px;border:1px solid var(--border-strong);border-radius:3px;background:var(--cream);font-family:monospace;font-size:13px;"></div>
     <div><label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:2px;">Country</label><input id="loc-f-country" type="text" value="${(v.country||'').replace(/"/g,'&quot;')}" placeholder="e.g. India" style="width:100%;padding:6px 8px;border:1px solid var(--border-strong);border-radius:3px;background:var(--cream);font-size:13px;"></div>
     <div><label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:2px;">Region/State</label><input id="loc-f-region" type="text" value="${(v.region||'').replace(/"/g,'&quot;')}" placeholder="e.g. Gujarat" style="width:100%;padding:6px 8px;border:1px solid var(--border-strong);border-radius:3px;background:var(--cream);font-size:13px;"></div>
-    <div style="display:flex;gap:6px;">
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+      <button id="loc-f-geocode" class="save-btn" type="button" style="padding:6px 10px;background:linear-gradient(135deg,var(--gold-dim),var(--gold));color:var(--maroon-deep);" onclick="locGeocodeFormName()" title="Look up coords + country + region from OpenStreetMap (free, no API key)">🔍 Look up</button>
       <button class="save-btn" style="padding:6px 12px;" onclick="locSavePlace('${(v.name||'').replace(/'/g,"\\'")}')">Save</button>
       <button class="save-btn" style="padding:6px 12px;background:transparent;color:var(--maroon-deep);border:1px solid var(--border-strong);" onclick="locCancelForm()">Cancel</button>
     </div>
-  </div>`;
+  </div>
+  <div id="loc-f-geocode-msg" style="margin-top:6px;font-size:11px;color:var(--text-muted);"></div>`;
+}
+
+// ── Canonical-only event-location pickers (Path 2) ──
+// IDs of every <select> that's a canonical-only event-location picker. Kept
+// here so a single change (Promote, Delete, locations.json reload) refreshes
+// every form on screen.
+const _EVENT_LOC_SELECT_IDS = ['af-location', 'eem-location'];
+
+// Build option HTML for a canonical-only event-location <select>. The selected
+// VALUE matches what's stored on events[].location: the "Title, Country" form
+// (e.g., "Sarangpur, India") so existing rendering and _mapLookup keep working
+// without migration. If the current value isn't canonical (legacy free text),
+// it's surfaced as a flagged "LEGACY" option at the top so the user can see
+// it's something the cleanup tools should fix.
+function _buildEventLocSelectHtml(selectedValue) {
+  const titled = k => k.replace(/\b\w/g, c => c.toUpperCase());
+  const sel = String(selectedValue || '');
+  const selNorm = sel.toLowerCase().trim().replace(/\s+/g, ' ');
+
+  const byCountry = new Map();
+  Object.keys(_MAP_LOCATIONS).forEach(k => {
+    const meta = _locMeta(k);
+    const country = meta.country || 'Other';
+    const label = meta.country !== 'Other' ? `${titled(k)}, ${meta.country}` : titled(k);
+    const display = titled(k) + (meta.region ? ` — ${meta.region}` : '');
+    if (!byCountry.has(country)) byCountry.set(country, []);
+    byCountry.get(country).push({ value: label, display });
+  });
+
+  // Did the current value match any canonical option?
+  let matched = false;
+  byCountry.forEach(items => {
+    items.forEach(o => { if (o.value.toLowerCase() === selNorm) matched = true; });
+  });
+  // Or via alias lookup?
+  if (!matched && _LOCATION_ALIASES[selNorm]) {
+    const canon = _LOCATION_ALIASES[selNorm];
+    if (_MAP_LOCATIONS[canon]) {
+      const meta = _locMeta(canon);
+      const canonLabel = meta.country !== 'Other' ? `${titled(canon)}, ${meta.country}` : titled(canon);
+      // Treat as matched-via-alias: select the canonical option so saving
+      // canonicalises the event's location.
+      // (We DON'T mutate selectedValue here; we'll rely on the option below)
+    }
+  }
+
+  const sortedCountries = [...byCountry.keys()].sort((a, b) => {
+    const rank = c => c === 'India' ? 0 : c === 'Other' ? 2 : 1;
+    if (rank(a) !== rank(b)) return rank(a) - rank(b);
+    return a.localeCompare(b);
+  });
+
+  const escAttr = s => String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+  const escHtml = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  let html = `<option value="">— no location —</option>`;
+
+  // Legacy / unrecognised value: keep it visible so users know it's there
+  if (sel && !matched) {
+    html += `<option value="${escAttr(sel)}" selected style="background:#fff8e6;color:#a60;">⚠ LEGACY: "${escHtml(sel)}" — clean via Locations admin</option>`;
+  }
+
+  for (const country of sortedCountries) {
+    html += `<optgroup label="${escAttr(country)}">`;
+    const items = byCountry.get(country).slice().sort((a, b) => a.display.localeCompare(b.display));
+    for (const item of items) {
+      const isSel = matched && item.value.toLowerCase() === selNorm;
+      html += `<option value="${escAttr(item.value)}"${isSel ? ' selected' : ''}>${escHtml(item.display)}</option>`;
+    }
+    html += `</optgroup>`;
+  }
+
+  html += `<option disabled>──────────────</option>`;
+  html += `<option value="__NEW__" style="font-weight:600;color:var(--maroon-deep);">+ Add new place... (auto-geocoded)</option>`;
+  return html;
+}
+
+// Repopulate a single event-location <select>, preserving its current value.
+function _refreshEventLocSelect(selectId, overrideValue) {
+  const sel = document.getElementById(selectId);
+  if (!sel || sel.tagName !== 'SELECT') return;
+  const current = overrideValue !== undefined ? overrideValue : sel.value;
+  sel.innerHTML = _buildEventLocSelectHtml(current);
+}
+
+// Refresh ALL event-location selects on the page. Called after any canonical
+// change (Promote, Delete, alias add, file load) so every form sees the new
+// master list immediately.
+function _refreshAllEventLocSelects() {
+  _EVENT_LOC_SELECT_IDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.tagName === 'SELECT') _refreshEventLocSelect(id);
+  });
+}
+
+// "+ Add new place" inline flow. Triggered when user picks the sentinel
+// option in an event-location <select>. Prompts for a name, geocodes it via
+// Nominatim, adds to canonical, and selects the new entry.
+async function _handleEventLocAddNew(selectId) {
+  const sel = document.getElementById(selectId);
+  if (!sel) return;
+  const previousValue = sel.dataset.lastValue || '';
+
+  const userInput = (window.prompt('Add a new canonical place — type the name, e.g. "Sarangpur" or "Sarangpur, India":') || '').trim();
+  if (!userInput) { sel.value = previousValue; return; }
+
+  const parts = userInput.split(',').map(s => s.trim()).filter(Boolean);
+  const key = parts[0].toLowerCase();
+  if (!key) { sel.value = previousValue; return; }
+  if (_MAP_LOCATIONS[key]) {
+    if (!confirm(`"${key}" is already in the master list. Pick it from the dropdown instead, or click OK to overwrite its current coords with a fresh geocode?`)) {
+      sel.value = previousValue;
+      return;
+    }
+  }
+
+  let lat = NaN, lng = NaN, country = parts[1] || 'Other', region = '';
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(userInput)}&format=json&limit=1&addressdetails=1`;
+    const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const arr = await resp.json();
+    if (!arr.length) {
+      alert(`Couldn't geocode "${userInput}".\n\nTry a more specific name (add country) and use Locations admin → + Add place to enter coords manually.`);
+      sel.value = previousValue;
+      return;
+    }
+    const r = arr[0];
+    lat = parseFloat(r.lat); lng = parseFloat(r.lon);
+    const addr = r.address || {};
+    country = addr.country || country;
+    region  = addr.state || addr.region || addr.county || addr.province || '';
+  } catch (e) {
+    alert(`Geocoding failed: ${e.message || e}\n\nUse Locations admin → + Add place to enter coords manually.`);
+    sel.value = previousValue;
+    return;
+  }
+
+  const titled = k => k.replace(/\b\w/g, c => c.toUpperCase());
+  const newLabel = country !== 'Other' ? `${titled(key)}, ${country}` : titled(key);
+
+  const ok = confirm(`Add to master list?\n\n  Name:    ${key}\n  Coords:  ${lat.toFixed(4)}, ${lng.toFixed(4)}\n  Country: ${country}${region ? '\n  Region:  ' + region : ''}\n\nThe place will be added in memory. Click "💾 Save locations.json to disk" in the Locations admin tab afterwards to persist.`);
+  if (!ok) { sel.value = previousValue; return; }
+
+  _MAP_LOCATIONS[key] = [lat, lng];
+  _LOCATION_COUNTRY[key] = `${country}|${region}`;
+  _audit('canonical-add-inline', `${key} (${lat.toFixed(4)}, ${lng.toFixed(4)})`);
+  _locAcCache = null;
+  buildLocationDatalist();
+  _refreshAllEventLocSelects();
+  // Re-find sel because innerHTML was replaced
+  const newSel = document.getElementById(selectId);
+  if (newSel) {
+    newSel.value = newLabel;
+    newSel.dataset.lastValue = newLabel;
+  }
+  // Also refresh the locations admin lists if they're rendered
+  try { if (typeof renderLocationsList === 'function') renderLocationsList(); } catch (e) { console.warn(e); }
+}
+
+// onchange handler for event-location selects: detects the "__NEW__" sentinel
+// and triggers the add-new flow; otherwise just remembers the new value so a
+// later cancel-from-add can restore it.
+function _onEventLocSelectChange(selectId) {
+  const sel = document.getElementById(selectId);
+  if (!sel) return;
+  if (sel.value === '__NEW__') {
+    _handleEventLocAddNew(selectId);
+  } else {
+    sel.dataset.lastValue = sel.value;
+  }
+}
+
+// Geocode the current Name field via OpenStreetMap Nominatim (free, no key).
+// Fills Lat/Lng/Country/Region. Honours the OSM usage policy by including a
+// User-Agent (browsers do this automatically) and rate-limiting bulk use.
+async function locGeocodeFormName() {
+  const nameEl = document.getElementById('loc-f-name');
+  const latEl  = document.getElementById('loc-f-lat');
+  const lngEl  = document.getElementById('loc-f-lng');
+  const cEl    = document.getElementById('loc-f-country');
+  const rEl    = document.getElementById('loc-f-region');
+  const msgEl  = document.getElementById('loc-f-geocode-msg');
+  const btnEl  = document.getElementById('loc-f-geocode');
+  if (!nameEl) return;
+
+  const setMsg = (txt, color) => { if (msgEl) { msgEl.textContent = txt; msgEl.style.color = color || 'var(--text-muted)'; } };
+  const setBtnBusy = (busy) => { if (btnEl) { btnEl.disabled = busy; btnEl.style.opacity = busy ? '0.6' : '1'; } };
+
+  let q = (nameEl.value || '').trim();
+  // Add country hint if already typed - improves accuracy ("loj" alone is ambiguous)
+  const countryHint = (cEl && cEl.value || '').trim();
+  if (!q) { setMsg('Enter a place name first.', '#a33'); nameEl.focus(); return; }
+  const queryStr = countryHint && !q.toLowerCase().includes(countryHint.toLowerCase()) ? `${q}, ${countryHint}` : q;
+  setMsg(`Looking up "${queryStr}" via OpenStreetMap...`);
+  setBtnBusy(true);
+
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(queryStr)}&format=json&limit=1&addressdetails=1`;
+    const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const arr = await resp.json();
+    if (!Array.isArray(arr) || !arr.length) {
+      setMsg(`No matches found for "${queryStr}". Try adding the country, or look it up manually.`, '#a33');
+      return;
+    }
+    const r = arr[0];
+    const lat = parseFloat(r.lat);
+    const lng = parseFloat(r.lon);
+    if (!isFinite(lat) || !isFinite(lng)) throw new Error('No coordinates in response');
+    if (latEl) latEl.value = lat.toFixed(4);
+    if (lngEl) lngEl.value = lng.toFixed(4);
+    const addr = r.address || {};
+    const country = addr.country || '';
+    const region  = addr.state || addr.region || addr.county || addr.province || '';
+    if (cEl && !cEl.value.trim() && country) cEl.value = country;
+    if (rEl && !rEl.value.trim() && region)  rEl.value = region;
+    setMsg(`✓ ${r.display_name}`, '#0a7d3c');
+    console.log('[locGeocodeFormName] result:', r);
+  } catch (e) {
+    setMsg(`✕ Lookup failed: ${e.message || e}`, '#a33');
+    console.error('[locGeocodeFormName] failed:', e);
+  } finally {
+    setBtnBusy(false);
+  }
 }
 
 function _locAliasFormHtml(values) {
   const v = values || {};
+  const titled = k => k.replace(/\b\w/g, c => c.toUpperCase());
+  // Build canonical <option> list, sorted by country then key.
+  const canonOptions = Object.keys(_MAP_LOCATIONS)
+    .map(k => {
+      const meta = _locMeta(k);
+      const lab = meta.country !== 'Other' ? `${titled(k)} (${meta.country}${meta.region ? ' / ' + meta.region : ''})` : titled(k);
+      return { key: k, lab, country: meta.country };
+    })
+    .sort((a, b) => a.country.localeCompare(b.country) || a.key.localeCompare(b.key))
+    .map(o => `<option value="${o.key.replace(/"/g,'&quot;')}" ${v.canonical === o.key ? 'selected' : ''}>${o.lab.replace(/</g,'&lt;')}</option>`)
+    .join('');
   return `<div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;">
-    <div><label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:2px;">Alias (alternate spelling)</label><input id="loc-fa-alias" type="text" value="${(v.alias||'').replace(/"/g,'&quot;')}" placeholder="e.g. amdavad" style="width:100%;padding:6px 8px;border:1px solid var(--border-strong);border-radius:3px;background:var(--cream);font-family:monospace;font-size:13px;"></div>
-    <div><label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:2px;">Canonical (existing place key)</label><input id="loc-fa-canon" type="text" data-autocomplete="location" value="${(v.canonical||'').replace(/"/g,'&quot;')}" placeholder="e.g. ahmedabad" style="width:100%;padding:6px 8px;border:1px solid var(--border-strong);border-radius:3px;background:var(--cream);font-family:monospace;font-size:13px;"></div>
+    <div>
+      <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:2px;">Alias (alternate spelling — what events currently say)</label>
+      <input id="loc-fa-alias" type="text" value="${(v.alias||'').replace(/"/g,'&quot;')}" placeholder="e.g. amdavad" style="width:100%;padding:6px 8px;border:1px solid var(--border-strong);border-radius:3px;background:var(--cream);font-family:monospace;font-size:13px;">
+    </div>
+    <div>
+      <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:2px;">Canonical (the place it should map to)</label>
+      <select id="loc-fa-canon" class="form-select" style="width:100%;padding:6px 8px;border:1px solid var(--border-strong);border-radius:3px;background:var(--cream);font-family:'Lato',sans-serif;font-size:13px;height:32px;">
+        <option value="">— pick canonical place —</option>
+        ${canonOptions}
+      </select>
+    </div>
     <div style="display:flex;gap:6px;">
       <button class="save-btn" style="padding:6px 12px;" onclick="locSaveAlias()">Save</button>
       <button class="save-btn" style="padding:6px 12px;background:transparent;color:var(--maroon-deep);border:1px solid var(--border-strong);" onclick="locCancelForm()">Cancel</button>
     </div>
+  </div>
+  <div style="margin-top:6px;font-size:11px;color:var(--text-muted);line-height:1.5;">
+    The alias is whatever your events say (lowercased and stored verbatim). The canonical is the existing place from the master list. After save, the autocomplete dropdown groups the alias under the canonical's country/coords, and the map plots events using the alias text.
   </div>`;
 }
 
@@ -9293,16 +9696,116 @@ function locSavePlace(originalName) {
   const region  = document.getElementById('loc-f-region').value.trim();
   if (!name) { alert('Name is required.'); return; }
   if (!isFinite(lat) || !isFinite(lng)) { alert('Lat and Lng must be numbers.'); return; }
+
+  // Duplicate detection: if we're adding (no originalName) or renaming to a
+  // key that's NOT the original, and that key already exists, warn before
+  // overwriting. The master list is a hash map keyed by name, so saving over
+  // an existing key silently loses its current coords/country/region.
+  const isAdd = !originalName;
+  const targetExists = _MAP_LOCATIONS[name] && (isAdd || originalName !== name);
+  if (targetExists) {
+    const existing = _MAP_LOCATIONS[name];
+    const existingMeta = _locMeta(name);
+    const ok = confirm(
+      `"${name}" is already in the master list:\n\n` +
+      `  Existing: ${existing[0].toFixed(4)}, ${existing[1].toFixed(4)} (${existingMeta.country}${existingMeta.region ? ' / ' + existingMeta.region : ''})\n` +
+      `  New:      ${lat.toFixed(4)}, ${lng.toFixed(4)} (${country}${region ? ' / ' + region : ''})\n\n` +
+      `Replace the existing entry with the new values?\n\n` +
+      `Click Cancel and use "↪ Map as alias" if the polluted text should point at the existing canonical instead.`
+    );
+    if (!ok) return;
+  }
+
   if (originalName && originalName !== name) {
     delete _MAP_LOCATIONS[originalName];
     delete _LOCATION_COUNTRY[originalName];
   }
   _MAP_LOCATIONS[name] = [lat, lng];
   _LOCATION_COUNTRY[name] = `${country}|${region}`;
+
+  // If the user came here from "✨ Promote" on a non-canonical event-text row,
+  // and the just-saved canonical has a different label than that source text,
+  // offer to rewrite the events using that source text. Without this, the
+  // row stays in the Location Index because the events still don't resolve.
+  const f = document.getElementById('loc-add-form');
+  const sourceText = (f && f.dataset && f.dataset.promoteSourceText) || '';
+  if (sourceText) {
+    const titled = k => k.replace(/\b\w/g, c => c.toUpperCase());
+    const newLabel = country !== 'Other' ? `${titled(name)}, ${country}` : titled(name);
+    if (sourceText !== newLabel) {
+      const evCount = events.filter(e => e.location === sourceText).length;
+      if (evCount > 0) {
+        if (confirm(
+          `Canonical "${name}" saved.\n\n` +
+          `Also rewrite the ${evCount} event${evCount === 1 ? '' : 's'} that currently say "${sourceText}" to instead say "${newLabel}" (so they plot at this canonical's pin)?\n\n` +
+          `Click Cancel if those events should keep saying "${sourceText}" — in that case you'll need to add an alias instead.`
+        )) {
+          let renamed = 0;
+          events.forEach(e => { if (e.location === sourceText) { e.location = newLabel; renamed++; } });
+          if (renamed > 0) {
+            _audit('event-location-rename', `promote-rewrite: "${sourceText}" -> "${newLabel}" on ${renamed} events`);
+            for (let i = 0; i < renamed; i++) _markEventsDirty();
+          }
+        }
+      }
+    }
+    if (f && f.dataset) delete f.dataset.promoteSourceText;
+  }
+
   _locAcCache = null;
   buildLocationDatalist();
   locCancelForm();
   renderLocationsList();
+  _refreshAllEventLocSelects();
+  if (typeof renderManageList === 'function') renderManageList(1);
+}
+
+// Delete a single alias entry. Warns if events currently use this alias text
+// and offers to rewrite them to the canonical "Title, Country" form so they
+// keep plotting at the same pin.
+function locDeleteAlias(aliasKey) {
+  const canon = _LOCATION_ALIASES[aliasKey];
+  if (!canon) { alert(`Alias "${aliasKey}" not found.`); return; }
+  const titled = k => k.replace(/\b\w/g, c => c.toUpperCase());
+  const meta = _locMeta(canon);
+  const aliasLabel = aliasKey.indexOf(',') === -1 && meta.country !== 'Other' ? `${titled(aliasKey)}, ${meta.country}` : titled(aliasKey);
+  const canonLabel = meta.country !== 'Other' ? `${titled(canon)}, ${meta.country}` : titled(canon);
+
+  const lc = s => String(s || '').toLowerCase().trim();
+  const targets = new Set([lc(aliasLabel), lc(aliasKey)]);
+  const usingEvents = events.filter(e => e && e.location && targets.has(lc(e.location)));
+
+  let msg = `Delete alias "${aliasKey}" → "${canon}"?`;
+  if (usingEvents.length > 0) {
+    msg += `\n\n⚠ ${usingEvents.length} event${usingEvents.length === 1 ? '' : 's'} currently use this alias text on disk. ` +
+           `Without the alias they will stop plotting on the map.\n\n` +
+           `Click OK to delete the alias AND rewrite those events to "${canonLabel}" (they keep plotting at the same pin).\n` +
+           `Click Cancel to abort.`;
+  } else {
+    msg += `\n\nNo events currently use this alias text — safe to delete.`;
+  }
+  if (!confirm(msg)) return;
+
+  let renamed = 0;
+  if (usingEvents.length > 0) {
+    usingEvents.forEach(e => { e.location = canonLabel; renamed++; });
+    _audit('event-location-rename', `alias-delete: ${renamed} events from "${aliasKey}" → "${canonLabel}"`);
+    for (let i = 0; i < renamed; i++) _markEventsDirty();
+  }
+
+  delete _LOCATION_ALIASES[aliasKey];
+  _audit('alias-delete', `${aliasKey} → ${canon}`);
+  _locAcCache = null;
+  buildLocationDatalist();
+  renderLocationsList();
+  _refreshAllEventLocSelects();
+  if (renamed > 0 && typeof renderManageList === 'function') renderManageList(1);
+
+  alert(
+    `Alias "${aliasKey}" deleted.` +
+    (renamed > 0 ? `\n${renamed} event${renamed === 1 ? '' : 's'} renamed to "${canonLabel}".` : '') +
+    `\n\nClick 💾 Save locations.json${renamed > 0 ? ' AND 💾 Save events.json' : ''} to persist.`
+  );
 }
 
 function locDelete(name) {
@@ -9316,19 +9819,27 @@ function locDelete(name) {
   _locAcCache = null;
   buildLocationDatalist();
   renderLocationsList();
+  _refreshAllEventLocSelects();
 }
 
 function locSaveAlias() {
-  const alias = document.getElementById('loc-fa-alias').value.trim().toLowerCase();
-  const canon = document.getElementById('loc-fa-canon').value.trim().toLowerCase().split(',')[0].trim();
-  if (!alias || !canon) { alert('Both fields are required.'); return; }
-  if (!_MAP_LOCATIONS[canon]) { alert(`Canonical place "${canon}" doesn't exist. Add it as a place first.`); return; }
-  if (alias === canon) { alert('Alias and canonical can\'t be the same.'); return; }
+  const alias = document.getElementById('loc-fa-alias').value.trim().toLowerCase().replace(/\s+/g, ' ');
+  // Canonical is now a <select>, so the value is already a clean canonical key.
+  const canon = (document.getElementById('loc-fa-canon').value || '').trim().toLowerCase();
+  if (!alias) { alert('Alias is required.'); return; }
+  if (!canon)  { alert('Pick a canonical place from the dropdown.'); return; }
+  if (!_MAP_LOCATIONS[canon]) { alert(`Canonical place "${canon}" doesn't exist in the master list.`); return; }
+  if (alias === canon) {
+    alert(`Alias and canonical are the same word ("${alias}").\n\nIf you want this event text to map to the existing canonical, the alias must be different (e.g., "${alias}, India" → "${canon}", or "${alias} mandir" → "${canon}").\n\nIf the event text IS already the canonical key, no alias is needed — events using "${alias}" already plot via direct match.`);
+    return;
+  }
   _LOCATION_ALIASES[alias] = canon;
+  _audit('alias-create', `"${alias}" -> "${canon}"`);
   _locAcCache = null;
   buildLocationDatalist();
   locCancelForm();
   renderLocationsList();
+  _refreshAllEventLocSelects();
 }
 
 // ── Non-canonical locations (used in events but not in master list) ──
@@ -9430,6 +9941,9 @@ function renderNonCanonicalLocations() {
   }
   const escAttr = s => s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   const escHtml = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  // We use data-attributes + delegated click handler instead of inline onclick
+  // so that any character in r.text (apostrophes, slashes, ampersands, etc.)
+  // is harmless. _locNonCanonInstallDelegate() wires this up once.
   tbody.innerHTML = rows.map(r => {
     const resHint = r.resolves
       ? `<span title="Currently resolves to canonical '${escAttr(r.resolvesTo)}' but text differs" style="font-size:10px;color:var(--text-muted);font-style:italic;">(plots as ${escHtml(r.resolvesTo)})</span>`
@@ -9438,8 +9952,10 @@ function renderNonCanonicalLocations() {
       ? `<span title="Looks like description text, not a place name" style="display:inline-block;font-size:10px;background:#a33;color:#fff;padding:1px 6px;border-radius:2px;font-weight:700;letter-spacing:0.04em;margin-right:6px;">POLLUTED</span>`
       : '';
     const cleanedSuggestion = r.polluted ? _locFirstSegment(r.text) : '';
+    const txtAttr = escAttr(r.text);
+    const cleanedAttr = escAttr(cleanedSuggestion);
     const cleanupBtn = r.polluted
-      ? `<button class="save-btn" style="padding:3px 8px;font-size:11px;min-width:auto;background:#a33;color:#fff;border:1px solid #802424;" onclick='locApplyCleanup(${JSON.stringify(r.text)}, ${JSON.stringify(cleanedSuggestion)})' title="Replace this polluted text with '${escAttr(cleanedSuggestion)}' on all events that use it">⚒ Clean to "${escHtml(cleanedSuggestion)}"</button>`
+      ? `<button class="save-btn" style="padding:3px 8px;font-size:11px;min-width:auto;background:#a33;color:#fff;border:1px solid #802424;" data-noncan-action="cleanup" data-text="${txtAttr}" data-cleaned="${cleanedAttr}" title="Replace this polluted text with '${escAttr(cleanedSuggestion)}' on all events that use it">⚒ Clean to "${escHtml(cleanedSuggestion)}"</button>`
       : '';
     return `<tr style="border-bottom:1px solid var(--border);">
       <td style="padding:6px 10px;color:var(--text-body);"><div>${pollutedFlag}${escHtml(r.text)}</div><div>${resHint}</div></td>
@@ -9447,13 +9963,40 @@ function renderNonCanonicalLocations() {
       <td style="padding:6px 10px;color:var(--text-muted);">${escHtml(r.country) || '<span style="font-style:italic;">unknown</span>'}</td>
       <td style="padding:6px 6px;white-space:nowrap;">
         ${cleanupBtn}
-        <button class="save-btn" style="padding:3px 8px;font-size:11px;min-width:auto;background:linear-gradient(135deg,var(--gold-dim),var(--gold));color:var(--maroon-deep);" onclick='locPromoteFromText(${JSON.stringify(r.text)})' title="Open Add Place form pre-filled with this name">✨ Promote</button>
-        <button class="save-btn" style="padding:3px 8px;font-size:11px;min-width:auto;" onclick='locShowAliasFromText(${JSON.stringify(r.text)})' title="Map this text as an alias of an existing canonical place">↪ Map as alias</button>
-        <button class="save-btn" style="padding:3px 8px;font-size:11px;min-width:auto;background:transparent;color:var(--maroon-deep);border:1px solid var(--border-strong);" onclick='locShowRenameFromText(${JSON.stringify(r.text)})' title="Replace this text on all events that use it">✎ Rename in events</button>
-        <button class="save-btn" style="padding:3px 8px;font-size:11px;min-width:auto;background:transparent;color:#a33;border:1px solid rgba(160,40,40,0.4);" onclick='locClearFromEvents(${JSON.stringify(r.text)})' title="Clear (empty) the location field on every event that uses this text. Use when the text is description rather than a real place name.">✕ Clear from events</button>
+        <button class="save-btn" style="padding:3px 8px;font-size:11px;min-width:auto;background:linear-gradient(135deg,var(--gold-dim),var(--gold));color:var(--maroon-deep);" data-noncan-action="promote"  data-text="${txtAttr}" title="Open Add Place form pre-filled with this name">✨ Promote</button>
+        <button class="save-btn" style="padding:3px 8px;font-size:11px;min-width:auto;"                                                                                       data-noncan-action="alias"    data-text="${txtAttr}" title="Map this text as an alias of an existing canonical place">↪ Map as alias</button>
+        <button class="save-btn" style="padding:3px 8px;font-size:11px;min-width:auto;background:transparent;color:var(--maroon-deep);border:1px solid var(--border-strong);"  data-noncan-action="rename"   data-text="${txtAttr}" title="Replace this text on all events that use it">✎ Rename in events</button>
+        <button class="save-btn" style="padding:3px 8px;font-size:11px;min-width:auto;background:transparent;color:#a33;border:1px solid rgba(160,40,40,0.4);"                 data-noncan-action="clear"    data-text="${txtAttr}" title="Clear (empty) the location field on every event that uses this text. Use when the text is description rather than a real place name.">✕ Clear from events</button>
       </td>
     </tr>`;
   }).join('');
+  _locNonCanonInstallDelegate();
+}
+
+// Single delegated click handler on the non-canonical tbody. Safe against any
+// characters in the location text. Installed once.
+function _locNonCanonInstallDelegate() {
+  const tbody = document.getElementById('loc-noncanon-tbody');
+  if (!tbody || tbody.dataset.delegated === '1') return;
+  tbody.dataset.delegated = '1';
+  tbody.addEventListener('click', e => {
+    const btn = e.target.closest('button[data-noncan-action]');
+    if (!btn) return;
+    const action = btn.dataset.noncanAction;
+    const text   = btn.dataset.text || '';
+    console.log(`[noncan-row] action=${action} text=${JSON.stringify(text)}`);
+    try {
+      if (action === 'cleanup')      locApplyCleanup(text, btn.dataset.cleaned || '');
+      else if (action === 'promote') locPromoteFromText(text);
+      else if (action === 'alias')   locShowAliasFromText(text);
+      else if (action === 'rename')  locShowRenameFromText(text);
+      else if (action === 'clear')   locClearFromEvents(text);
+      else console.warn('[noncan-row] unknown action:', action);
+    } catch (err) {
+      console.error('[noncan-row] handler threw:', err);
+      alert('Action failed: ' + (err.message || err) + ' (see dev console)');
+    }
+  });
 }
 
 // ── Fuzzy match helpers (used by the consolidation wizard) ──
@@ -9678,6 +10221,556 @@ function locConsApplySelected() {
   try { if (typeof renderManageList === 'function') renderManageList(1); } catch (e) { console.error('[consolidation] renderManageList failed:', e); }
 }
 
+// ── Canonical-but-orphaned places (zero events reference them) ──
+function _locUsageCount() {
+  // canonical key -> number of events resolving to it via _mapLookup
+  const counts = new Map();
+  events.forEach(e => {
+    if (!e.location) return;
+    const meta = _mapLookup(e.location);
+    if (meta && meta.key) counts.set(meta.key, (counts.get(meta.key) || 0) + 1);
+  });
+  return counts;
+}
+
+function _locOrphanCanonicals() {
+  const used = _locUsageCount();
+  const aliasesByCanonical = {};
+  Object.entries(_LOCATION_ALIASES).forEach(([alias, can]) => {
+    if (!aliasesByCanonical[can]) aliasesByCanonical[can] = [];
+    aliasesByCanonical[can].push(alias);
+  });
+  return Object.keys(_MAP_LOCATIONS)
+    .filter(k => !used.has(k))
+    .map(k => {
+      const meta = _locMeta(k);
+      return {
+        key: k,
+        lat: _MAP_LOCATIONS[k][0],
+        lng: _MAP_LOCATIONS[k][1],
+        country: meta.country,
+        region: meta.region,
+        aliases: (aliasesByCanonical[k] || []).join(', ')
+      };
+    })
+    .sort((a, b) => a.country.localeCompare(b.country) || (a.region || '').localeCompare(b.region || '') || a.key.localeCompare(b.key));
+}
+
+function renderOrphanCanonicals() {
+  const tbody = document.getElementById('loc-orphan-tbody');
+  const sum   = document.getElementById('loc-orphan-summary');
+  if (!tbody) return;
+  const all = _locOrphanCanonicals();
+  const totalCanon = Object.keys(_MAP_LOCATIONS).length;
+
+  const q = ((document.getElementById('loc-orphan-filter') || {}).value || '').toLowerCase().trim();
+  let rows = all;
+  if (q) rows = rows.filter(r => `${r.key} ${r.country} ${r.region} ${r.aliases}`.toLowerCase().includes(q));
+
+  if (totalCanon === 0) {
+    sum.innerHTML = '';
+  } else if (all.length === 0) {
+    sum.innerHTML = `<span style="color:#0a7d3c;">All ${totalCanon} canonical places are referenced by at least one event.</span>`;
+  } else if (rows.length === all.length) {
+    sum.innerHTML = `<strong>${all.length}</strong> of ${totalCanon} canonical place${totalCanon === 1 ? '' : 's'} are unused.`;
+  } else {
+    sum.innerHTML = `Showing <strong>${rows.length}</strong> of ${all.length} unused (out of ${totalCanon} total canonical).`;
+  }
+
+  if (all.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" style="padding:24px;text-align:center;color:var(--text-muted);">All canonical places are in use by events.</td></tr>';
+    return;
+  }
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="padding:24px;text-align:center;color:var(--text-muted);">No unused entries match the filter.</td></tr>';
+    return;
+  }
+
+  const escAttr = s => String(s || '').replace(/"/g, '&quot;');
+  const escHtml = s => String(s || '').replace(/</g, '&lt;');
+  tbody.innerHTML = rows.map(r => `<tr style="border-bottom:1px solid var(--border);">
+    <td style="padding:6px 10px;font-family:monospace;color:var(--maroon-deep);">${escHtml(r.key)}</td>
+    <td style="padding:6px 10px;text-align:right;font-family:monospace;">${r.lat.toFixed(4)}</td>
+    <td style="padding:6px 10px;text-align:right;font-family:monospace;">${r.lng.toFixed(4)}</td>
+    <td style="padding:6px 10px;">${escHtml(r.country)}</td>
+    <td style="padding:6px 10px;color:var(--text-muted);">${escHtml(r.region)}</td>
+    <td style="padding:6px 10px;font-size:11px;color:var(--text-muted);">${escHtml(r.aliases)}</td>
+    <td style="padding:6px 6px;white-space:nowrap;">
+      <button class="save-btn" style="padding:3px 7px;font-size:11px;min-width:auto;" onclick="locEdit('${escAttr(r.key)}')" title="Edit">✎</button>
+      <button class="save-btn" style="padding:3px 7px;font-size:11px;min-width:auto;background:transparent;border:1px solid #a33;color:#a33;" onclick="locDelete('${escAttr(r.key)}')" title="Delete this canonical place (and any aliases pointing at it)">🗑 Delete</button>
+    </td>
+  </tr>`).join('');
+}
+
+function locDeleteAllOrphans() {
+  const beforePlaces  = Object.keys(_MAP_LOCATIONS).length;
+  const beforeAliases = Object.keys(_LOCATION_ALIASES).length;
+  console.log(`[locDeleteAllOrphans] _MAP_LOCATIONS has ${beforePlaces} entries, _LOCATION_ALIASES has ${beforeAliases} before`);
+
+  const orphans = _locOrphanCanonicals();
+  console.log(`[locDeleteAllOrphans] _locOrphanCanonicals() returned ${orphans.length} orphans`);
+  if (orphans.length === 0) { alert('No unused canonical places.'); return; }
+  if (orphans.length > 0 && orphans.length < 6) {
+    console.log('[locDeleteAllOrphans] sample orphan keys:', orphans.slice(0, 5).map(o => o.key));
+  } else {
+    console.log('[locDeleteAllOrphans] first 5 orphan keys:', orphans.slice(0, 5).map(o => o.key));
+  }
+
+  let aliasCt = 0;
+  orphans.forEach(o => {
+    Object.values(_LOCATION_ALIASES).forEach(can => { if (can === o.key) aliasCt++; });
+  });
+
+  const msg = `Delete all ${orphans.length} unused canonical place${orphans.length === 1 ? '' : 's'} from locations.json?\n\n` +
+              (aliasCt ? `${aliasCt} alias${aliasCt === 1 ? '' : 'es'} pointing at them will also be removed.\n\n` : '') +
+              `This affects only the master list (locations.json), not your events. Click "💾 Save locations.json to disk" afterwards to persist.`;
+  if (!confirm(msg)) { console.log('[locDeleteAllOrphans] cancelled'); return; }
+
+  let removedPlaces = 0, removedAliases = 0, deleteFailures = 0;
+  orphans.forEach(o => {
+    const aliasesPointing = Object.entries(_LOCATION_ALIASES).filter(([a, c]) => c === o.key).map(([a]) => a);
+    const ok1 = delete _MAP_LOCATIONS[o.key];
+    if (typeof _LOCATION_COUNTRY !== 'undefined') delete _LOCATION_COUNTRY[o.key];
+    aliasesPointing.forEach(a => { if (delete _LOCATION_ALIASES[a]) removedAliases++; });
+    if (ok1 && !(o.key in _MAP_LOCATIONS)) {
+      removedPlaces++;
+    } else {
+      deleteFailures++;
+      console.warn(`[locDeleteAllOrphans] delete failed for key "${o.key}" — still present in _MAP_LOCATIONS:`, o.key in _MAP_LOCATIONS);
+    }
+  });
+
+  const afterPlaces  = Object.keys(_MAP_LOCATIONS).length;
+  const afterAliases = Object.keys(_LOCATION_ALIASES).length;
+  console.log(`[locDeleteAllOrphans] _MAP_LOCATIONS now has ${afterPlaces} (was ${beforePlaces}, removed ${removedPlaces}, ${deleteFailures} failures)`);
+  console.log(`[locDeleteAllOrphans] _LOCATION_ALIASES now has ${afterAliases} (was ${beforeAliases}, removed ${removedAliases})`);
+
+  _audit('locations-orphan-delete', `${removedPlaces} places + ${removedAliases} aliases removed`);
+  _locAcCache = null;
+  try { buildLocationDatalist(); } catch (e) { console.error('[locDeleteAllOrphans] buildLocationDatalist failed:', e); }
+  try { renderLocationsList(); } catch (e) { console.error('[locDeleteAllOrphans] renderLocationsList failed:', e); }
+  try { _refreshAllEventLocSelects(); } catch (e) { console.error('[locDeleteAllOrphans] _refreshAllEventLocSelects failed:', e); }
+
+  const failNote = deleteFailures ? `\n\n⚠ ${deleteFailures} entr${deleteFailures === 1 ? 'y' : 'ies'} could not be deleted (see dev console).` : '';
+  alert(`Removed ${removedPlaces} canonical place${removedPlaces === 1 ? '' : 's'} and ${removedAliases} alias${removedAliases === 1 ? '' : 'es'} from the in-memory list.${failNote}\n\n_MAP_LOCATIONS: ${beforePlaces} → ${afterPlaces}\n\nClick "💾 Save locations.json to disk" in the toolbar to persist.`);
+}
+
+// Make sure the Locations admin tab (where the inline forms live) is on screen.
+// Used when the user triggers a rename / alias / promote / merge action from
+// the Map panel via the "🛠 Edit list" shortcut — without this, the form opens
+// in the admin tab while the user is still looking at the Map and sees nothing.
+function _locEnsureAdminLocationsVisible() {
+  try { if (typeof showPanel === 'function') showPanel('admin'); } catch (e) { console.warn(e); }
+  try { if (typeof switchAdminTab === 'function') switchAdminTab('locations'); } catch (e) { console.warn(e); }
+}
+
+// Find groups of distinct event-location strings that resolve to the SAME
+// canonical place. e.g., "London, UK" (876 events) and "London" (3 events)
+// both resolve to canonical "london" — they're text variants of the same
+// place. Returns: [{canonical, preferredLabel, variants:[{text, count}, ...]}]
+// ordered by total event count desc.
+function _locFindTextVariants() {
+  const byCanonical = new Map(); // canonicalKey -> Map<text, count>
+  events.forEach(e => {
+    if (!e || !e.location) return;
+    const meta = _mapLookup(e.location);
+    if (!meta || !meta.key) return;  // skip text that doesn't plot
+    const k = meta.key;
+    if (!byCanonical.has(k)) byCanonical.set(k, new Map());
+    const inner = byCanonical.get(k);
+    inner.set(e.location, (inner.get(e.location) || 0) + 1);
+  });
+  const titled = k => k.replace(/\b\w/g, c => c.toUpperCase());
+  const groups = [];
+  byCanonical.forEach((textCounts, canKey) => {
+    if (textCounts.size < 2) return;
+    const meta = _locMeta(canKey);
+    const preferredLabel = meta.country !== 'Other' ? `${titled(canKey)}, ${meta.country}` : titled(canKey);
+    const variants = [...textCounts.entries()]
+      .map(([text, count]) => ({ text, count, isPreferred: text === preferredLabel }))
+      .sort((a, b) => b.count - a.count);
+    const total = variants.reduce((a, v) => a + v.count, 0);
+    groups.push({ canonical: canKey, preferredLabel, variants, total });
+  });
+  groups.sort((a, b) => b.total - a.total);
+  return groups;
+}
+
+// One-click batch tool: for every same-canonical group, rewrite all variants
+// to the canonical "Title, Country" form. Confirms with a preview first.
+function locUnifyTextVariants() {
+  const groups = _locFindTextVariants();
+  const proposals = [];
+  let totalEvents = 0;
+  groups.forEach(g => {
+    g.variants.forEach(v => {
+      if (v.text !== g.preferredLabel) {
+        proposals.push({ from: v.text, to: g.preferredLabel, count: v.count, canonical: g.canonical });
+        totalEvents += v.count;
+      }
+    });
+  });
+  if (!proposals.length) {
+    alert('Nothing to unify — every event-location text is already in the canonical "Title, Country" form for the place it plots at.');
+    return;
+  }
+  proposals.sort((a, b) => b.count - a.count);
+
+  const SHOW = 25;
+  const preview = proposals.slice(0, SHOW)
+    .map(p => `  ${String(p.count).padStart(4, ' ')}×  "${p.from}"  →  "${p.to}"`)
+    .join('\n');
+  const more = proposals.length > SHOW ? `\n  …and ${proposals.length - SHOW} more` : '';
+
+  if (!confirm(
+    `Unify ${proposals.length} text variant${proposals.length === 1 ? '' : 's'} (${totalEvents} event${totalEvents === 1 ? '' : 's'} total)?\n\n` +
+    `Each variant gets its location text rewritten to the canonical "Title, Country" form. They already plot at the same map pin — this just standardises the text.\n\n` +
+    preview + more +
+    `\n\nClick 💾 Save events.json afterwards to persist.`
+  )) return;
+
+  let updated = 0;
+  proposals.forEach(p => {
+    let n = 0;
+    events.forEach(e => { if (e.location === p.from) { e.location = p.to; n++; } });
+    if (n > 0) {
+      _audit('event-location-rename', `unify-variants: "${p.from}" -> "${p.to}" on ${n} events`);
+      for (let i = 0; i < n; i++) _markEventsDirty();
+      updated += n;
+    }
+  });
+
+  try { buildLocationDatalist(); } catch (e) { console.error(e); }
+  try { renderLocationIndex(); } catch (e) { console.error(e); }
+  try { if (typeof renderLocationsList === 'function') renderLocationsList(); } catch (e) {}
+  try { if (typeof renderManageList === 'function') renderManageList(1); } catch (e) {}
+
+  alert(
+    `Unified ${updated} event${updated === 1 ? '' : 's'} across ${proposals.length} text variant${proposals.length === 1 ? '' : 's'}.\n\n` +
+    `Click 💾 Save events.json in the Locations toolbar (or this modal's footer) to persist.`
+  );
+}
+
+// ── Location Index modal: every event-location with type + source events ──
+// Optional preFilter: 'all' | 'canonical' | 'alias' | 'freetext' | 'legacy'
+function locOpenIndexModal(preFilter) {
+  document.getElementById('loc-idx-modal').style.display = 'flex';
+  try { sessionStorage.setItem('baps_active_modal', 'idx'); } catch (e) {}
+  if (preFilter) {
+    const tf = document.getElementById('loc-idx-type-filter');
+    if (tf) tf.value = preFilter;
+  }
+  const fi = document.getElementById('loc-idx-filter');
+  if (fi) fi.value = '';
+  if (typeof _refreshDirtyIndicators === 'function') _refreshDirtyIndicators();
+  renderLocationIndex();
+}
+function locCloseIndexModal() {
+  document.getElementById('loc-idx-modal').style.display = 'none';
+  try { sessionStorage.removeItem('baps_active_modal'); } catch (e) {}
+}
+
+function _locIndexEntries() {
+  const norm = s => String(s || '').toLowerCase().trim().replace(/\s+/g, ' ');
+  const map = new Map();
+  events.forEach(e => {
+    if (!e || !e.location) return;
+    const text = e.location;
+    if (!map.has(text)) map.set(text, { text, count: 0, eventIds: [], firstDate: '' });
+    const entry = map.get(text);
+    entry.count++;
+    if (entry.eventIds.length < 100) entry.eventIds.push(e.id);
+    if (!entry.firstDate || (e.date && e.date < entry.firstDate)) entry.firstDate = e.date || '';
+  });
+  return [...map.values()].map(entry => {
+    const aliasKey = norm(entry.text);
+    const isCanonical = _isCanonicalLocText(entry.text);
+    const aliasMatch = !isCanonical && _LOCATION_ALIASES[aliasKey];
+    let type = 'freetext';
+    if (isCanonical && _MAP_LOCATIONS[aliasKey]) type = 'canonical';
+    else if (isCanonical) type = 'alias';        // matched only as alias label
+    else if (aliasMatch) type = 'alias';
+    const meta = _mapLookup(entry.text);
+    return Object.assign(entry, {
+      type,
+      resolvesTo: meta ? meta.key : null,
+      country:   meta ? meta.country : '',
+      polluted:  _looksLikePollutedLocation ? _looksLikePollutedLocation(entry.text) : false
+    });
+  });
+}
+
+function renderLocationIndex() {
+  const list = document.getElementById('loc-idx-list');
+  const sum  = document.getElementById('loc-idx-summary');
+  if (!list || !sum) return;
+
+  const all = _locIndexEntries();
+  const q = ((document.getElementById('loc-idx-filter') || {}).value || '').toLowerCase().trim();
+  const typeFilter = ((document.getElementById('loc-idx-type-filter') || {}).value || 'all');
+  const sortMode = ((document.getElementById('loc-idx-sort') || {}).value || 'count-desc');
+
+  let rows = all;
+  if (q) rows = rows.filter(r => `${r.text} ${r.resolvesTo || ''} ${r.country || ''}`.toLowerCase().includes(q));
+  if (typeFilter === 'canonical') rows = rows.filter(r => r.type === 'canonical');
+  else if (typeFilter === 'alias') rows = rows.filter(r => r.type === 'alias');
+  else if (typeFilter === 'freetext') rows = rows.filter(r => r.type === 'freetext');
+  else if (typeFilter === 'legacy')   rows = rows.filter(r => r.type === 'freetext' && !r.resolvesTo);
+
+  rows.sort((a, b) => {
+    if (sortMode === 'count-asc')  return a.count - b.count || a.text.localeCompare(b.text);
+    if (sortMode === 'name-asc')   return a.text.localeCompare(b.text);
+    if (sortMode === 'name-desc')  return b.text.localeCompare(a.text);
+    return b.count - a.count || a.text.localeCompare(b.text); // count-desc default
+  });
+
+  const totalEv = rows.reduce((a, r) => a + r.count, 0);
+  const cn = all.filter(r => r.type === 'canonical').length;
+  const al = all.filter(r => r.type === 'alias').length;
+  const fr = all.filter(r => r.type === 'freetext').length;
+  const lg = all.filter(r => r.type === 'freetext' && !r.resolvesTo).length;
+  sum.innerHTML = `<strong>${all.length}</strong> distinct location${all.length === 1 ? '' : 's'} on ${all.reduce((a, r) => a + r.count, 0)} event${all.reduce((a, r) => a + r.count, 0) === 1 ? '' : 's'} · <span style="color:#0a7d3c;">${cn} canonical</span>, <span style="color:#a60;">${al} alias</span>, <span style="color:var(--text-muted);">${fr} free-text</span> (<span style="color:#a33;">${lg} don't plot</span>) · Showing <strong>${rows.length}</strong> (${totalEv} events)`;
+
+  if (!rows.length) {
+    list.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted);">No entries match the filter.</div>';
+    return;
+  }
+
+  const escAttr = s => String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  const escHtml = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  list.innerHTML = rows.map(r => {
+    const tAttr = escAttr(r.text);
+    const firstId = r.eventIds[0] || '';
+    const typeBadge = r.type === 'canonical'
+      ? `<span title="Matches a canonical place exactly" style="display:inline-block;font-size:10px;background:#0a7d3c;color:#fff;padding:1px 6px;border-radius:2px;font-weight:700;letter-spacing:0.04em;">CANONICAL</span>`
+      : r.type === 'alias'
+      ? `<span title="Resolves via an alias entry" style="display:inline-block;font-size:10px;background:#a60;color:#fff;padding:1px 6px;border-radius:2px;font-weight:700;letter-spacing:0.04em;">ALIAS</span>`
+      : `<span title="Free-text on events; not in master list" style="display:inline-block;font-size:10px;background:#666;color:#fff;padding:1px 6px;border-radius:2px;font-weight:700;letter-spacing:0.04em;">FREE-TEXT</span>`;
+    const pollutedBadge = r.polluted
+      ? `<span title="Looks like description text, not a place name" style="display:inline-block;font-size:10px;background:#a33;color:#fff;padding:1px 6px;border-radius:2px;font-weight:700;letter-spacing:0.04em;margin-left:4px;">POLLUTED</span>`
+      : '';
+    const mapHint = r.resolvesTo
+      ? `<span style="color:var(--text-muted);font-size:11px;font-style:italic;">plots as ${escHtml(r.resolvesTo)}</span>`
+      : `<span style="color:#a33;font-size:11px;font-style:italic;">won't plot on map</span>`;
+
+    // Per-type actions
+    let actions = '';
+    if (r.type === 'canonical') {
+      const canonKey = r.resolvesTo || '';
+      actions += `<button class="save-btn" data-loc-idx-action="edit-canon"     data-key="${escAttr(canonKey)}" style="padding:3px 8px;font-size:11px;min-width:auto;" title="Edit this canonical place's coords / country / region">✎ Edit canonical</button>`;
+      actions += `<button class="save-btn" data-loc-idx-action="merge-canonical" data-key="${escAttr(canonKey)}" style="padding:3px 8px;font-size:11px;min-width:auto;background:linear-gradient(135deg,var(--gold-dim),var(--gold));color:var(--maroon-deep);" title="Merge this canonical INTO another canonical (events get renamed, aliases re-pointed, source deleted)">🔀 Merge into…</button>`;
+    } else if (r.type === 'freetext') {
+      actions += `<button class="save-btn" data-loc-idx-action="rename" data-text="${tAttr}" style="padding:3px 8px;font-size:11px;min-width:auto;" title="Replace this text on every event that uses it">✎ Rename</button>`;
+      actions += `<button class="save-btn" data-loc-idx-action="alias"  data-text="${tAttr}" style="padding:3px 8px;font-size:11px;min-width:auto;" title="Map this text as an alias of an existing canonical place">↪ Alias</button>`;
+      actions += `<button class="save-btn" data-loc-idx-action="promote" data-text="${tAttr}" style="padding:3px 8px;font-size:11px;min-width:auto;background:linear-gradient(135deg,var(--gold-dim),var(--gold));color:var(--maroon-deep);" title="Add as a new canonical place (auto-geocoded)">✨ Promote</button>`;
+      actions += `<button class="save-btn" data-loc-idx-action="clear"  data-text="${tAttr}" style="padding:3px 8px;font-size:11px;min-width:auto;background:transparent;color:#a33;border:1px solid rgba(160,40,40,0.4);" title="Clear (empty) the location field on every event that uses this text">✕ Clear</button>`;
+    } else if (r.type === 'alias') {
+      actions += `<button class="save-btn" data-loc-idx-action="rename" data-text="${tAttr}" style="padding:3px 8px;font-size:11px;min-width:auto;" title="Replace this text on every event">✎ Rename</button>`;
+    }
+
+    return `<div style="border-bottom:1px solid var(--border);padding:9px 12px;display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;">
+      <div style="flex:1;min-width:240px;">
+        <div style="font-size:13px;color:var(--text-body);word-wrap:break-word;">"${escHtml(r.text)}"</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">
+          ${typeBadge}${pollutedBadge}
+          <span style="margin-left:6px;">${r.count} event${r.count === 1 ? '' : 's'}${r.firstDate ? ' · earliest ' + r.firstDate : ''}</span>
+          <span style="margin-left:6px;">·</span>
+          <span style="margin-left:6px;">${mapHint}</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+        ${firstId ? `<button class="save-btn" data-loc-idx-action="open-event" data-eid="${escAttr(firstId)}" style="padding:3px 8px;font-size:11px;min-width:auto;" title="Open the first source event in the modal viewer">👁 Open first event</button>` : ''}
+        <button class="save-btn" data-loc-idx-action="filter-manage" data-text="${tAttr}" style="padding:3px 8px;font-size:11px;min-width:auto;background:transparent;color:var(--maroon-deep);border:1px solid var(--border-strong);" title="Close this modal, switch to Manage Events, and filter to events using this exact text">📋 ${r.count} event${r.count === 1 ? '' : 's'} →</button>
+        ${actions}
+      </div>
+    </div>`;
+  }).join('');
+
+  _locIdxInstallDelegate();
+}
+
+// One delegated click handler for all action buttons in the index list.
+function _locIdxInstallDelegate() {
+  const list = document.getElementById('loc-idx-list');
+  if (!list || list.dataset.delegated === '1') return;
+  list.dataset.delegated = '1';
+  list.addEventListener('click', e => {
+    const btn = e.target.closest('button[data-loc-idx-action]');
+    if (!btn) return;
+    const action = btn.dataset.locIdxAction;
+    const text   = btn.dataset.text || '';
+    const eid    = btn.dataset.eid  || '';
+    const key    = btn.dataset.key  || '';
+    console.log(`[loc-idx] action=${action} text=${JSON.stringify(text)} eid=${eid} key=${key}`);
+    try {
+      if (action === 'open-event') {
+        if (typeof openModal === 'function') openModal(eid);
+      } else if (action === 'filter-manage') {
+        locCloseIndexModal();
+        if (typeof switchAdminTab === 'function') switchAdminTab('manage');
+        const kw = document.getElementById('m-keyword');
+        if (kw) { kw.value = text; if (typeof renderManageList === 'function') renderManageList(1); }
+      } else if (action === 'rename')   { _locEnsureAdminLocationsVisible(); locCloseIndexModal(); locShowRenameFromText(text); }
+      else if (action === 'alias')      { _locEnsureAdminLocationsVisible(); locCloseIndexModal(); locShowAliasFromText(text); }
+      else if (action === 'promote')    { _locEnsureAdminLocationsVisible(); locCloseIndexModal(); locPromoteFromText(text); }
+      else if (action === 'clear')      { locClearFromEvents(text); }
+      else if (action === 'edit-canon') {
+        if (key && typeof locEdit === 'function') {
+          _locEnsureAdminLocationsVisible();
+          locCloseIndexModal();
+          locEdit(key);
+          // Scroll the form into view (locEdit already shows the form but doesn't scroll)
+          const f = document.getElementById('loc-add-form');
+          if (f) f.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } else if (action === 'merge-canonical') {
+        if (key && typeof locMergeCanonicalDialog === 'function') {
+          _locEnsureAdminLocationsVisible();
+          locMergeCanonicalDialog(key);
+        }
+      }
+    } catch (err) {
+      console.error('[loc-idx] handler threw:', err);
+      alert('Action failed: ' + (err.message || err) + ' (see dev console)');
+    }
+  });
+}
+
+// ── Merge two canonical places into one ──
+function locMergeCanonicalDialog(sourceKey) {
+  if (!sourceKey || !_MAP_LOCATIONS[sourceKey]) {
+    alert('Source canonical "' + sourceKey + '" not found in master list.');
+    return;
+  }
+  const titled = k => k.replace(/\b\w/g, c => c.toUpperCase());
+  const sourceMeta = _locMeta(sourceKey);
+
+  // Count affected events (events whose location currently resolves to source)
+  let evMatch = 0;
+  events.forEach(e => {
+    if (!e || !e.location) return;
+    const meta = _mapLookup(e.location);
+    if (meta && meta.key === sourceKey) evMatch++;
+  });
+  const aliasMatch = Object.entries(_LOCATION_ALIASES).filter(([a, c]) => c === sourceKey).length;
+
+  // Build destination dropdown — every canonical except source itself
+  const options = Object.keys(_MAP_LOCATIONS)
+    .filter(k => k !== sourceKey)
+    .map(k => {
+      const m = _locMeta(k);
+      const display = titled(k) + (m.region ? ' — ' + m.region : '');
+      return { key: k, display, country: m.country };
+    })
+    .sort((a, b) => a.country.localeCompare(b.country) || a.key.localeCompare(b.key));
+  const optsHtml = options.map(o =>
+    `<option value="${o.key.replace(/"/g, '&quot;')}">${o.display.replace(/</g,'&lt;')} (${o.country.replace(/</g,'&lt;')})</option>`
+  ).join('');
+
+  // Close the index modal (if open) so the form area is visible
+  const idxOpen = document.getElementById('loc-idx-modal') && document.getElementById('loc-idx-modal').style.display === 'flex';
+  if (idxOpen) locCloseIndexModal();
+  if (typeof switchAdminTab === 'function') switchAdminTab('locations');
+
+  const f = document.getElementById('loc-add-form');
+  if (!f) { alert('Locations admin form not found.'); return; }
+  const escHtml = s => String(s || '').replace(/</g, '&lt;');
+  f.innerHTML = `
+    <div style="font-size:12px;font-weight:600;color:var(--maroon-deep);margin-bottom:6px;">🔀 Merge canonical "${escHtml(sourceKey)}" INTO another canonical place</div>
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;line-height:1.5;">
+      The source canonical will be <strong>deleted</strong>. Every event that currently resolves to it gets its location text rewritten to the destination's "Title, Country" form. Every alias pointing at the source gets re-pointed at the destination.
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;">
+      <div>
+        <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:2px;">Source (will be deleted)</label>
+        <input type="text" disabled value="${escHtml(sourceKey)}" style="width:100%;padding:6px 8px;border:1px solid var(--border-strong);border-radius:3px;background:#f5e9d8;font-family:monospace;font-size:13px;color:#a33;">
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:2px;">Destination canonical (keeps existing coords)</label>
+        <select id="loc-merge-dest" style="width:100%;padding:6px 8px;border:1px solid var(--border-strong);border-radius:3px;background:var(--cream);font-family:'Lato',sans-serif;font-size:13px;height:32px;">
+          <option value="">— pick destination —</option>
+          ${optsHtml}
+        </select>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <button class="save-btn" style="padding:6px 12px;background:#0a7d3c;color:#fff;border:1px solid #085a2b;" onclick="locMergeApply('${sourceKey.replace(/'/g, "\\'")}')">🔀 Merge</button>
+        <button class="save-btn" style="padding:6px 12px;background:transparent;color:var(--maroon-deep);border:1px solid var(--border-strong);" onclick="locCancelForm()">Cancel</button>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--text-muted);margin-top:8px;">
+      Will affect: <strong>${evMatch}</strong> event location${evMatch === 1 ? '' : 's'}, <strong>${aliasMatch}</strong> alias${aliasMatch === 1 ? '' : 'es'}, and delete the source canonical (${sourceMeta.country}${sourceMeta.region ? ' / ' + sourceMeta.region : ''}).
+    </div>`;
+  f.style.display = 'block';
+  document.getElementById('loc-merge-dest').focus();
+  f.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function locMergeApply(sourceKey) {
+  const destKey = (document.getElementById('loc-merge-dest').value || '').trim();
+  if (!destKey) { alert('Pick a destination canonical from the dropdown.'); return; }
+  if (destKey === sourceKey) { alert('Destination must differ from source.'); return; }
+  if (!_MAP_LOCATIONS[destKey]) { alert('Destination "' + destKey + '" not found in master list.'); return; }
+  if (!_MAP_LOCATIONS[sourceKey]) { alert('Source "' + sourceKey + '" no longer in master list (merged already?).'); return; }
+
+  const titled = k => k.replace(/\b\w/g, c => c.toUpperCase());
+  const destMeta = _locMeta(destKey);
+  const destLabel = destMeta.country !== 'Other' ? `${titled(destKey)}, ${destMeta.country}` : titled(destKey);
+
+  // Compute counts for the confirm dialog
+  let evToRename = 0;
+  events.forEach(e => {
+    if (!e || !e.location) return;
+    const meta = _mapLookup(e.location);
+    if (meta && meta.key === sourceKey) evToRename++;
+  });
+  const aliasesToRepoint = Object.entries(_LOCATION_ALIASES).filter(([a, c]) => c === sourceKey).map(([a]) => a);
+
+  if (!confirm(
+    `Merge "${sourceKey}" INTO "${destKey}"?\n\n` +
+    `  ${evToRename} event location${evToRename === 1 ? '' : 's'} will be rewritten to "${destLabel}"\n` +
+    `  ${aliasesToRepoint.length} alias${aliasesToRepoint.length === 1 ? '' : 'es'} (${aliasesToRepoint.join(', ') || 'none'}) will be re-pointed to "${destKey}"\n` +
+    `  Canonical "${sourceKey}" will be DELETED from the master list\n\n` +
+    `Click "💾 Save events.json to disk" AND "💾 Save locations.json to disk" afterwards to persist.`
+  )) return;
+
+  let evRenamed = 0, aliasRepointed = 0;
+
+  events.forEach(e => {
+    if (!e || !e.location) return;
+    const meta = _mapLookup(e.location);
+    if (meta && meta.key === sourceKey) {
+      e.location = destLabel;
+      evRenamed++;
+    }
+  });
+
+  aliasesToRepoint.forEach(a => {
+    _LOCATION_ALIASES[a] = destKey;
+    aliasRepointed++;
+  });
+
+  delete _MAP_LOCATIONS[sourceKey];
+  if (typeof _LOCATION_COUNTRY !== 'undefined') delete _LOCATION_COUNTRY[sourceKey];
+
+  for (let i = 0; i < evRenamed; i++) _markEventsDirty();
+  _audit('canonical-merge', `${sourceKey} -> ${destKey} (${evRenamed} events, ${aliasRepointed} aliases)`);
+  _locAcCache = null;
+  try { buildLocationDatalist(); } catch (e) { console.error('[locMergeApply] buildLocationDatalist failed:', e); }
+  try { locCancelForm(); } catch (e) {}
+  try { renderLocationsList(); } catch (e) { console.error('[locMergeApply] renderLocationsList failed:', e); }
+  try { _refreshAllEventLocSelects(); } catch (e) { console.error('[locMergeApply] _refreshAllEventLocSelects failed:', e); }
+  try { if (typeof renderManageList === 'function') renderManageList(1); } catch (e) {}
+
+  alert(
+    `Merge complete:\n` +
+    `  ${evRenamed} event location${evRenamed === 1 ? '' : 's'} renamed to "${destLabel}"\n` +
+    `  ${aliasRepointed} alias${aliasRepointed === 1 ? '' : 'es'} re-pointed to "${destKey}"\n` +
+    `  Canonical "${sourceKey}" deleted\n\n` +
+    `Click "💾 Save events.json to disk" AND "💾 Save locations.json to disk" in the Locations toolbar to persist.`
+  );
+}
+
 function locApplyCleanup(oldText, newText) {
   if (!newText || newText === oldText) { alert('No change.'); return; }
   const count = events.filter(e => e.location === oldText).length;
@@ -9698,20 +10791,45 @@ function locPromoteFromText(text) {
   const bareName = (text || '').split(',')[0].trim().toLowerCase();
   const trailingCountry = (text || '').includes(',') ? text.split(',').slice(-1)[0].trim() : '';
   const f = document.getElementById('loc-add-form');
+  // Remember the source event-text that triggered this promote, so locSavePlace
+  // can offer to rename the events that use it once the canonical is saved.
+  f.dataset.promoteSourceText = String(text || '');
   const escHtml = s => String(s).replace(/</g,'&lt;');
-  f.innerHTML = `<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;font-weight:600;">+ Add canonical place (from event text "${escHtml(text)}")</div>` + _locFormHtml({
+
+  // Heads-up banner if the proposed name already exists as a canonical place.
+  // Promoting would overwrite its coords/country/region. The user usually
+  // wants ↪ Map as alias instead, so surface that early.
+  let dupBanner = '';
+  if (bareName && _MAP_LOCATIONS[bareName]) {
+    const meta = _locMeta(bareName);
+    const existing = _MAP_LOCATIONS[bareName];
+    dupBanner = `<div style="background:#fff8e6;border:1px solid var(--gold);color:var(--maroon-deep);padding:8px 10px;border-radius:3px;margin-bottom:10px;font-size:12px;line-height:1.5;">
+      ⚠ <strong>"${escHtml(bareName)}"</strong> is already in the master list (${existing[0].toFixed(4)}, ${existing[1].toFixed(4)}, ${escHtml(meta.country)}${meta.region ? ' / ' + escHtml(meta.region) : ''}).<br>
+      Saving below will <strong>replace</strong> those values. If you instead want this event text to map to the existing canonical, click Cancel and use the <strong>↪ Map as alias</strong> button on the row.
+    </div>`;
+  }
+
+  f.innerHTML = `<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;font-weight:600;">+ Add canonical place (from event text "${escHtml(text)}")</div>` + dupBanner + _locFormHtml({
     name: bareName, lat: '', lng: '', country: trailingCountry, region: ''
   });
   f.style.display = 'block';
-  document.getElementById('loc-f-lat').focus();
   f.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  // Skip auto-lookup if the name already exists — the user is more likely to
+  // cancel and choose "Map as alias", and we don't need to ping Nominatim
+  // for a place we already have coords for.
+  if (!_MAP_LOCATIONS[bareName]) {
+    setTimeout(() => { try { locGeocodeFormName(); } catch (e) { console.warn(e); } }, 100);
+  }
 }
 
 function locShowAliasFromText(text) {
-  const bareName = (text || '').split(',')[0].trim().toLowerCase();
+  // Default alias to the FULL event text (lowercased, normalized whitespace),
+  // not just the first comma segment. This way multi-segment free text like
+  // "robbinsville, new jersey, usa" can become an alias of canonical "robbinsville".
+  const fullName = String(text || '').trim().toLowerCase().replace(/\s+/g, ' ');
   const f = document.getElementById('loc-add-form');
   const escHtml = s => String(s).replace(/</g,'&lt;');
-  f.innerHTML = `<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;font-weight:600;">↪ Map "${escHtml(text)}" as alias of an existing canonical place</div>` + _locAliasFormHtml({ alias: bareName, canonical: '' });
+  f.innerHTML = `<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;font-weight:600;">↪ Map "${escHtml(text)}" as alias of an existing canonical place</div>` + _locAliasFormHtml({ alias: fullName, canonical: '' });
   f.style.display = 'block';
   document.getElementById('loc-fa-canon').focus();
   f.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -9719,14 +10837,18 @@ function locShowAliasFromText(text) {
 
 function locShowRenameFromText(oldText) {
   const f = document.getElementById('loc-add-form');
-  const escHtml = s => String(s).replace(/</g,'&lt;');
-  const escAttr = s => String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+  const escHtml = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const escAttr = s => String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   const count = events.filter(e => e.location === oldText).length;
+  // The old text is stored on the input's data-old-text attribute (HTML-encoded
+  // so apostrophes/quotes/angles are safe). The Replace button reads it from
+  // there at click time, avoiding the inline-onclick string-injection bug
+  // that broke for any oldText containing an apostrophe.
   f.innerHTML = `<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;font-weight:600;">✎ Rename "${escHtml(oldText)}" on every event that uses it (<strong>${count}</strong> event${count === 1 ? '' : 's'} affected)</div>
     <div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap;">
-      <div style="flex:1;min-width:240px;"><label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:2px;">New location text (will replace the old text on all ${count} event${count === 1 ? '' : 's'})</label><input id="loc-rename-input" type="text" data-autocomplete="location" value="${escAttr(oldText)}" placeholder="e.g. Ahmedabad, India" style="width:100%;padding:6px 8px;border:1px solid var(--border-strong);border-radius:3px;background:var(--cream);font-family:'Lato',sans-serif;font-size:13px;"></div>
+      <div style="flex:1;min-width:240px;"><label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:2px;">New location text (will replace the old text on all ${count} event${count === 1 ? '' : 's'})</label><input id="loc-rename-input" type="text" data-autocomplete="location" data-old-text="${escAttr(oldText)}" value="${escAttr(oldText)}" placeholder="e.g. Ahmedabad, India" style="width:100%;padding:6px 8px;border:1px solid var(--border-strong);border-radius:3px;background:var(--cream);font-family:'Lato',sans-serif;font-size:13px;"></div>
       <div style="display:flex;gap:6px;">
-        <button class="save-btn" style="padding:6px 12px;" onclick='locApplyRename(${JSON.stringify(oldText)})'>✓ Replace on ${count} event${count === 1 ? '' : 's'}</button>
+        <button class="save-btn" style="padding:6px 12px;" onclick="locApplyRename()">✓ Replace on ${count} event${count === 1 ? '' : 's'}</button>
         <button class="save-btn" style="padding:6px 12px;background:transparent;color:var(--maroon-deep);border:1px solid var(--border-strong);" onclick="locCancelForm()">Cancel</button>
       </div>
     </div>`;
@@ -9767,8 +10889,12 @@ function locClearFromEvents(oldText) {
   alert(`Cleared location on ${cleared} event(s). Click "💾 Save events.json to disk" to persist.`);
 }
 
-function locApplyRename(oldText) {
-  const newText = (document.getElementById('loc-rename-input').value || '').trim();
+function locApplyRename() {
+  const input = document.getElementById('loc-rename-input');
+  if (!input) { alert('Rename form not visible.'); return; }
+  const oldText = input.dataset.oldText || '';
+  const newText = (input.value || '').trim();
+  if (!oldText) { alert('No source text — open the form via "✎ Rename in events" on a row.'); return; }
   if (!newText) { alert('New location is required.'); return; }
   if (newText === oldText) { alert('No change.'); return; }
   let updated = 0;
@@ -9828,7 +10954,13 @@ function _locAcAllOptions() {
     if (!_MAP_LOCATIONS[canonical]) return;
     const meta = _locMeta(canonical);
     if (alias.length < 2 || alias === canonical) return;
-    const lab = meta.country !== 'Other' ? `${titled(alias)}, ${meta.country}` : titled(alias);
+    // If the alias already contains a comma (multi-segment, e.g. "robbinsville, new jersey, usa"),
+    // don't append the country again — that would produce ugly "Robbinsville, New Jersey, Usa, USA"
+    // duplicates in the dropdown.
+    const hasComma = alias.indexOf(',') !== -1;
+    const lab = hasComma
+      ? titled(alias)
+      : (meta.country !== 'Other' ? `${titled(alias)}, ${meta.country}` : titled(alias));
     addOpt(lab, meta.country, meta.region);
   });
   // Existing event-location strings — only add if they bring NEW info beyond
