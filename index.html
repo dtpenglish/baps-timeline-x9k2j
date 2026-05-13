@@ -1629,6 +1629,13 @@ nav {
 </style>
 <!-- SheetJS for xlsx read/write -->
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<!-- PWA-PATCH-v1 -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#5C1A1A">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="BAPS Timeline">
 </head>
 <body>
 <datalist id="known-locations"></datalist>
@@ -11242,6 +11249,16 @@ window.addEventListener('hashchange', () => {
     }
   }
 });
+</script>
+<!-- PWA-PATCH-v1 -->
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('service-worker.js')
+      .then(reg => console.log('SW registered:', reg.scope))
+      .catch(err => console.log('SW registration failed:', err));
+  });
+}
 </script>
 </body>
 </html>
