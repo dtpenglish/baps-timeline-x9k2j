@@ -5275,7 +5275,7 @@ function initCategories(dataCats) {
   let saved = localStorage.getItem('baps_categories');
   if (saved) {
     EVENT_CATEGORIES = JSON.parse(saved);
-  } else if (dataCats && dataCats.length > 0) {
+  } else if (dataCats && dataCats.length > 0) {a
     EVENT_CATEGORIES = dataCats;
     localStorage.setItem('baps_categories', JSON.stringify(dataCats));
   } else {
