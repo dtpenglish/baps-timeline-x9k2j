@@ -1755,14 +1755,6 @@ nav {
           <option>Satpurush in UK & Europe</option>
         </select>
       </div>
-      <div class="search-field">
-        <label>Channel Source</label>
-        <select class="search-select" id="s-source" onchange="doSearch()">
-          <option value="">All Channels</option>
-          <option>Today in BAPS History</option>
-          <option>Satpurush in UK & Europe</option>
-        </select>
-      </div>
     </div>
 
     <div class="filter-group-title">Gregorian Date</div>
@@ -2352,14 +2344,6 @@ nav {
             <label>Event Type</label>
             <select class="form-select" id="m-type" onchange="renderManageList(1)">
               <option value="">All Types</option>
-            </select>
-          </div>
-          <div class="search-field">
-            <label>Channel Source</label>
-            <select class="form-select" id="m-source" onchange="renderManageList(1)">
-              <option value="">All Channels</option>
-              <option>Today in BAPS History</option>
-              <option>Satpurush in UK & Europe</option>
             </select>
           </div>
           <div class="search-field">
@@ -3479,7 +3463,6 @@ function applyFilters(prefix, baseArray) {
   const guru = document.getElementById(prefix+'-guru')?.value || '';
   const type = document.getElementById(prefix+'-type')?.value || '';
   const source = document.getElementById(prefix+'-source')?.value || '';
-  const source = document.getElementById(prefix+'-source')?.value || '';
 
   const gDay = document.getElementById(prefix+'-greg-day')?.value || '';
   const gMonth = document.getElementById(prefix+'-greg-month')?.value || '';
@@ -3490,8 +3473,6 @@ function applyFilters(prefix, baseArray) {
   const yTo = parseInt(document.getElementById(prefix+'-year-to')?.value) || 9999;
 
   let results = baseArray;
-  if (source) results = results.filter(e => tgSourceOf(e) === source);
-
   if (source) results = results.filter(e => tgSourceOf(e) === source);
 
   if (kw) results = results.filter(e =>
@@ -3578,7 +3559,7 @@ function doSearch(resetPage) {
 }
 
 function resetSearch() {
-  ['keyword','date','guj-month','tithi','sudvad','guru','type','source','greg-day','greg-month','greg-date-num','greg-year','samvat','year-from','year-to'].forEach(id => {
+  ['keyword','date','guj-month','tithi','sudvad','guru','type','greg-day','greg-month','greg-date-num','greg-year','samvat','year-from','year-to'].forEach(id => {
     const el = document.getElementById('s-'+id);
     if(el) el.value = '';
   });
@@ -3806,7 +3787,7 @@ document.addEventListener('keydown', e => {
 });
 
 function resetManageSearch() {
-  ['keyword','date','guj-month','tithi','sudvad','guru','type','source','greg-day','greg-month','greg-date-num','greg-year','samvat','year-from','year-to'].forEach(id => {
+  ['keyword','date','guj-month','tithi','sudvad','guru','type','greg-day','greg-month','greg-date-num','greg-year','samvat','year-from','year-to'].forEach(id => {
     const el = document.getElementById('m-'+id);
     if(el) el.value = '';
   });
