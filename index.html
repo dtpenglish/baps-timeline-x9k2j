@@ -1626,6 +1626,334 @@ nav {
 .page-select { padding: 0 8px; }
 .page-select option { background: var(--maroon-dark); color: var(--cream); }
 .page-jump-input { width: 50px; text-align: center; }
+/* ═══════════════════════════════════════════════════
+   KIOSK MODE + TOUCH (Phase 1)
+   Activated by ?kiosk=1 — body gets class "kiosk".
+   ═══════════════════════════════════════════════════ */
+
+/* Elements only shown in kiosk mode */
+.kiosk-only { display: none; }
+body.kiosk .kiosk-only { display: inline-block; }
+
+/* Kiosk hides admin entry and blocks accidental selection/callouts */
+body.kiosk .admin-btn { display: none !important; }
+body.kiosk { touch-action: manipulation; }
+body.kiosk *:not(input):not(textarea):not(select) {
+  -webkit-user-select: none; user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* ── Attract screen (idle state) ── */
+#attract-overlay {
+  display: none;
+  position: fixed; inset: 0; z-index: 9000;
+  background: var(--maroon-deep);
+  overflow: hidden;
+  cursor: pointer;
+}
+#attract-overlay.active { display: block; }
+.attract-photo {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 1.6s ease;
+  animation: attractZoom 9s ease-in-out infinite alternate;
+}
+.attract-photo.show { opacity: 1; }
+@keyframes attractZoom { from { transform: scale(1); } to { transform: scale(1.07); } }
+.attract-scrim {
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(42,10,10,0.55) 0%, rgba(42,10,10,0) 35%, rgba(42,10,10,0) 55%, rgba(42,10,10,0.88) 100%);
+  pointer-events: none;
+}
+.attract-caption {
+  position: absolute; left: 0; right: 0; bottom: 11vh;
+  text-align: center; padding: 0 8vw;
+  pointer-events: none;
+}
+.attract-date {
+  font-family: 'Cinzel', serif;
+  color: var(--gold-light);
+  font-size: clamp(16px, 2.2vw, 26px);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.8);
+}
+.attract-title {
+  font-family: 'Cormorant Garamond', serif;
+  color: var(--cream);
+  font-size: clamp(22px, 3.6vw, 44px);
+  font-weight: 600;
+  line-height: 1.25;
+  text-shadow: 0 2px 16px rgba(0,0,0,0.85);
+}
+.attract-brand {
+  position: absolute; top: 6vh; left: 0; right: 0;
+  text-align: center; pointer-events: none;
+}
+.attract-brand .ab-main {
+  font-family: 'Cinzel', serif; color: var(--gold-light);
+  font-size: clamp(20px, 2.6vw, 32px); font-weight: 700; letter-spacing: 0.12em;
+  text-shadow: 0 0 24px rgba(232,184,75,0.45);
+}
+.attract-prompt {
+  position: absolute; left: 0; right: 0; bottom: 4vh;
+  text-align: center; pointer-events: none;
+  font-family: 'Lato', sans-serif;
+  color: var(--gold-pale);
+  font-size: clamp(14px, 1.6vw, 19px);
+  letter-spacing: 0.28em; text-transform: uppercase;
+  animation: attractPulse 2.6s ease-in-out infinite;
+}
+@keyframes attractPulse { 0%,100% { opacity: 0.45; } 50% { opacity: 1; } }
+
+/* ── Explore panel (typing-free navigation) ── */
+.explore-wrap { max-width: 1200px; margin: 0 auto; padding: 28px 24px 60px; }
+.explore-heading {
+  font-family: 'Cinzel', serif; color: var(--gold-pale);
+  font-size: 15px; letter-spacing: 0.18em; text-transform: uppercase;
+  margin: 30px 0 14px; padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.explore-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 14px;
+}
+.explore-tile {
+  background: linear-gradient(160deg, var(--cream) 0%, var(--cream-dark) 100%);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  padding: 22px 20px 18px;
+  min-height: 110px;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  position: relative; overflow: hidden;
+}
+.explore-tile:active { transform: scale(0.97); }
+.explore-tile .et-icon { font-size: 26px; margin-bottom: 8px; }
+.explore-tile .et-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 21px; font-weight: 700; color: var(--maroon-deep);
+  line-height: 1.15; margin-bottom: 4px;
+}
+.explore-tile .et-sub {
+  font-family: 'Lato', sans-serif; font-size: 12.5px; color: var(--text-muted);
+  letter-spacing: 0.04em;
+}
+.explore-tile .et-count {
+  position: absolute; top: 14px; right: 14px;
+  font-family: 'Lato', sans-serif; font-size: 11px; font-weight: 700;
+  color: var(--gold-dim); background: rgba(201,146,42,0.13);
+  border: 1px solid var(--border); border-radius: 20px; padding: 3px 10px;
+}
+.explore-era-band { height: 4px; border-radius: 2px; margin-bottom: 12px;
+  background: linear-gradient(90deg, var(--gold), var(--gold-light)); }
+.explore-chips { display: flex; flex-wrap: wrap; gap: 10px; }
+.explore-chip {
+  background: var(--cream); border: 1px solid var(--border-strong);
+  border-radius: 22px; padding: 10px 18px; cursor: pointer;
+  font-family: 'Lato', sans-serif; font-size: 14px; font-weight: 700;
+  color: var(--maroon-deep); letter-spacing: 0.03em;
+  transition: transform 0.12s ease;
+}
+.explore-chip:active { transform: scale(0.94); }
+.explore-chip .ec-n { color: var(--gold-dim); font-size: 12px; margin-left: 6px; }
+
+/* ── Story mode (full-screen guided thread player) ── */
+#story-overlay, #quiz-overlay {
+  display: none;
+  position: fixed; inset: 0; z-index: 8500;
+  background: var(--maroon-deep);
+  overflow: hidden;
+}
+#story-overlay.active, #quiz-overlay.active { display: block; }
+.story-bg {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; opacity: 0.45;
+  transition: opacity 0.5s ease;
+}
+.story-bg.hidden { opacity: 0; }
+.story-scrim {
+  position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(180deg, rgba(42,10,10,0.72) 0%, rgba(42,10,10,0.35) 40%, rgba(42,10,10,0.86) 100%);
+}
+.story-close {
+  position: absolute; top: 18px; right: 18px; z-index: 20;
+  background: rgba(42,10,10,0.6); border: 1px solid var(--gold-dim);
+  color: var(--gold-pale); font-size: 20px; border-radius: 3px;
+  min-width: 48px; min-height: 48px; cursor: pointer;
+}
+.story-progress {
+  position: absolute; top: 24px; left: 0; right: 0; z-index: 15;
+  text-align: center; pointer-events: none;
+  font-family: 'Cinzel', serif; color: var(--gold-light);
+  font-size: 13px; letter-spacing: 0.22em;
+}
+.story-bar {
+  position: absolute; top: 0; left: 0; height: 4px; z-index: 15;
+  background: linear-gradient(90deg, var(--gold-dim), var(--gold-light));
+  transition: width 0.35s ease;
+}
+.story-content {
+  position: absolute; inset: 0; z-index: 10;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  text-align: center; padding: 9vh 10vw 12vh;
+}
+.story-date {
+  font-family: 'Cinzel', serif; color: var(--gold-light);
+  font-size: clamp(15px, 2vw, 24px); letter-spacing: 0.16em;
+  text-transform: uppercase; margin-bottom: 14px;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+}
+.story-title {
+  font-family: 'Cormorant Garamond', serif; color: var(--cream);
+  font-size: clamp(24px, 4vw, 48px); font-weight: 700; line-height: 1.2;
+  margin-bottom: 18px; text-shadow: 0 2px 16px rgba(0,0,0,0.85);
+}
+.story-desc {
+  font-family: 'Lato', sans-serif; color: var(--gold-pale);
+  font-size: clamp(15px, 1.6vw, 19px); line-height: 1.75;
+  max-width: 760px; max-height: 38vh; overflow-y: auto;
+  text-shadow: 0 1px 8px rgba(0,0,0,0.9);
+  padding: 0 6px;
+}
+.story-nav {
+  position: absolute; top: 50%; transform: translateY(-50%); z-index: 20;
+  background: rgba(42,10,10,0.55); border: 1px solid var(--gold-dim);
+  color: var(--gold-light); font-size: 44px; line-height: 1;
+  min-width: 64px; min-height: 84px; border-radius: 3px; cursor: pointer;
+  transition: background 0.2s;
+}
+.story-nav:active { background: rgba(201,146,42,0.35); }
+.story-nav.prev { left: 14px; }
+.story-nav.next { right: 14px; }
+.story-btn {
+  background: linear-gradient(135deg, var(--gold-dim), var(--gold));
+  border: none; color: var(--maroon-deep);
+  font-family: 'Lato', sans-serif; font-size: 16px; font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  padding: 16px 38px; border-radius: 3px; cursor: pointer; margin: 8px;
+  min-height: 54px;
+}
+.story-btn.ghost {
+  background: transparent; color: var(--gold-pale);
+  border: 1px solid var(--gold-dim);
+}
+.story-play-chip {
+  position: absolute; top: 10px; right: 10px; z-index: 6;
+  background: rgba(42,10,10,0.78); color: var(--gold-light);
+  border: 1px solid var(--gold); border-radius: 20px;
+  font-family: 'Lato', sans-serif; font-size: 12px; font-weight: 700;
+  letter-spacing: 0.08em; padding: 8px 14px; cursor: pointer;
+}
+
+/* ── Quiz mode ── */
+.quiz-wrap {
+  position: absolute; inset: 0; z-index: 10;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 8vh 6vw 6vh; overflow-y: auto;
+}
+.quiz-counter {
+  font-family: 'Cinzel', serif; color: var(--gold-dim);
+  font-size: 13px; letter-spacing: 0.22em; margin-bottom: 20px;
+}
+.quiz-question {
+  font-family: 'Cormorant Garamond', serif; color: var(--cream);
+  font-size: clamp(20px, 3vw, 34px); font-weight: 600; line-height: 1.3;
+  text-align: center; max-width: 820px; margin-bottom: 10px;
+}
+.quiz-event {
+  font-family: 'Lato', sans-serif; color: var(--gold-pale);
+  font-size: clamp(15px, 1.8vw, 20px); line-height: 1.6;
+  text-align: center; max-width: 760px; margin-bottom: 30px;
+}
+.quiz-options {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px; width: 100%; max-width: 820px;
+}
+.quiz-opt {
+  background: rgba(253,246,232,0.06); border: 1px solid var(--gold-dim);
+  color: var(--cream); font-family: 'Lato', sans-serif;
+  font-size: clamp(16px, 1.8vw, 21px); font-weight: 700;
+  padding: 20px 16px; border-radius: 3px; cursor: pointer;
+  min-height: 64px; transition: background 0.15s, transform 0.1s;
+}
+.quiz-opt:active { transform: scale(0.97); }
+.quiz-opt.correct { background: rgba(10,125,60,0.55); border-color: #3fbf7f; }
+.quiz-opt.wrong   { background: rgba(140,20,20,0.6);  border-color: #d05050; }
+.quiz-opt:disabled { cursor: default; }
+.quiz-feedback {
+  min-height: 60px; margin-top: 22px; text-align: center;
+  font-family: 'Lato', sans-serif; color: var(--gold-pale); font-size: 16px;
+}
+.quiz-score-big {
+  font-family: 'Cinzel', serif; color: var(--gold-light);
+  font-size: clamp(40px, 8vw, 84px); font-weight: 700; margin: 20px 0 6px;
+  text-shadow: 0 0 32px rgba(232,184,75,0.4);
+}
+
+/* ── Era scrubber (Timeline panel) ── */
+#era-scrubber {
+  display: flex; gap: 3px; margin-bottom: 6px;
+  overflow-x: auto; padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+}
+.era-seg {
+  flex: 1 1 0; min-width: 104px;
+  background: linear-gradient(180deg, rgba(201,146,42,0.10), rgba(201,146,42,0.04));
+  border: 1px solid var(--border);
+  border-top: 4px solid var(--gold-dim);
+  border-radius: 2px;
+  padding: 9px 10px 8px;
+  cursor: pointer; text-align: center;
+  transition: background 0.15s, transform 0.1s;
+  user-select: none;
+}
+.era-seg:active { transform: scale(0.97); }
+.era-seg.active {
+  background: linear-gradient(180deg, rgba(201,146,42,0.32), rgba(201,146,42,0.12));
+  border-color: var(--gold); border-top-color: var(--gold-light);
+}
+.era-seg .es-years {
+  font-family: 'Cinzel', serif; color: var(--gold-light);
+  font-size: 11px; letter-spacing: 0.08em; margin-bottom: 3px; white-space: nowrap;
+}
+.era-seg .es-name {
+  font-family: 'Lato', sans-serif; color: var(--cream-mid);
+  font-size: 11.5px; font-weight: 700; line-height: 1.25;
+}
+.era-seg .es-count {
+  font-family: 'Lato', sans-serif; color: var(--gold-dim);
+  font-size: 10.5px; margin-top: 3px;
+}
+#era-scrubber-status {
+  margin-bottom: 14px; font-family: 'Lato', sans-serif;
+  font-size: 13px; color: var(--gold-pale); min-height: 20px;
+}
+#era-scrubber-status .ess-clear {
+  display: inline-block; background: rgba(201,146,42,0.15);
+  border: 1px solid var(--border-strong); border-radius: 16px;
+  color: var(--gold-light); font-size: 12px; font-weight: 700;
+  padding: 4px 14px; margin-left: 10px; cursor: pointer;
+}
+
+/* ── Touch ergonomics (any coarse-pointer device, not just kiosk) ── */
+@media (pointer: coarse) {
+  .nav-btn { padding: 11px 16px; font-size: 14px; }
+  .admin-btn { padding: 10px 14px; }
+  .search-select, .form-select, .form-input { min-height: 42px; }
+  .save-btn { min-height: 42px; }
+  .ss-nav { min-width: 62px; min-height: 62px; font-size: 38px; }
+  .ss-close-btn { min-width: 52px; min-height: 52px; font-size: 22px; }
+  .ss-auto-btn { min-height: 46px; padding: 10px 20px; }
+  .tag { padding: 5px 10px; }
+  .nav-btn:active, .save-btn:active { background: rgba(201,146,42,0.28); }
+}
 </style>
 <!-- SheetJS for xlsx read/write -->
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
@@ -1645,6 +1973,7 @@ nav {
       Today in BAPS History
     </div>
     <nav>
+      <button class="nav-btn" onclick="showPanel('explore')" data-panel="explore">✦ Explore</button>
       <button class="nav-btn active" onclick="showPanel('today')" data-panel="today">Today</button>
       <button class="nav-btn" onclick="showPanel('search')" data-panel="search">Search</button>
       <button class="nav-btn" onclick="showPanel('gurus')" data-panel="gurus">By Guru</button>
@@ -1699,8 +2028,12 @@ nav {
   </div>
 
   <div class="events-section" id="today-events-section">
-    <div class="section-heading">
-      Events on this day <span class="count-badge" id="today-count">0</span>
+    <div class="section-heading" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+      <span>Events on this day <span class="count-badge" id="today-count">0</span></span>
+      <label style="margin-left:auto;display:inline-flex;align-items:center;gap:7px;font-family:'Lato',sans-serif;font-size:12px;font-weight:400;letter-spacing:0.04em;text-transform:none;color:var(--gold-pale);cursor:pointer;" title="Include day-by-day vicharan reports (PSM/MSM Vicharan sources)">
+        <input type="checkbox" id="today-vicharan-toggle" style="accent-color:var(--gold);width:16px;height:16px;cursor:pointer;" onchange="localStorage.setItem('baps_today_vicharan', this.checked ? '1' : '0'); renderToday();">
+        🧭 Include vicharan reports
+      </label>
     </div>
     <div class="events-grid" id="today-events-grid">
       <div class="empty-state">
@@ -1731,6 +2064,7 @@ nav {
         <label>Guru</label>
         <select class="search-select" id="s-guru" onchange="doSearch()">
           <option value="">All Gurus</option>
+          <option>Ramanand Swami</option>
           <option>Bhagwan Swaminarayan</option>
           <option>Gunatitanand Swami</option>
           <option>Bhagatji Maharaj</option>
@@ -1750,9 +2084,12 @@ nav {
       <div class="search-field">
         <label>Channel Source</label>
         <select class="search-select" id="s-source" onchange="doSearch()">
-          <option value="">All Channels</option>
+          <option value="">All Sources</option>
           <option>Today in BAPS History</option>
           <option>Satpurush in UK & Europe</option>
+          <option>Sampradaya Timeline</option>
+          <option>PSM Vicharan</option>
+          <option>MSM Vicharan</option>
         </select>
       </div>
     </div>
@@ -1762,6 +2099,14 @@ nav {
       <div class="search-field">
         <label>Exact Date Picker</label>
         <input type="date" class="search-input" id="s-date" onchange="doSearch()">
+      </div>
+      <div class="search-field">
+        <label>From Date</label>
+        <input type="date" class="search-input" id="s-date-from" onchange="doSearch()">
+      </div>
+      <div class="search-field">
+        <label>To Date</label>
+        <input type="date" class="search-input" id="s-date-to" onchange="doSearch()">
       </div>
       <div class="search-field">
         <label>Day of Week</label>
@@ -1868,6 +2213,7 @@ nav {
   <div style="background: linear-gradient(180deg,var(--maroon) 0%,var(--maroon-dark) 100%); border-bottom:1px solid var(--border); padding:24px;">
     <div class="guru-pills" style="padding:0;max-width:900px;">
       <button class="guru-pill active" onclick="filterByGuru('')" data-guru="">All</button>
+      <button class="guru-pill" onclick="filterByGuru('Ramanand Swami')" data-guru="Ramanand Swami">Ramanand Swami</button>
       <button class="guru-pill" onclick="filterByGuru('Bhagwan Swaminarayan')" data-guru="Bhagwan Swaminarayan">Bhagwan Swaminarayan</button>
       <button class="guru-pill" onclick="filterByGuru('Gunatitanand Swami')" data-guru="Gunatitanand Swami">Gunatitanand Swami</button>
       <button class="guru-pill" onclick="filterByGuru('Bhagatji Maharaj')" data-guru="Bhagatji Maharaj">Bhagatji Maharaj</button>
@@ -1913,6 +2259,8 @@ nav {
       <button class="guru-pill"        data-tlsort="panch-asc"  onclick="setTimelineSort('panch-asc')">Panchang ↑</button>
       <button class="guru-pill"        data-tlsort="panch-desc" onclick="setTimelineSort('panch-desc')">Panchang ↓</button>
     </div>
+    <div id="era-scrubber"></div>
+    <div id="era-scrubber-status"></div>
     <div id="timeline-list"></div>
   </div>
 </div>
@@ -2133,6 +2481,7 @@ nav {
       <div id="modal-audio"></div>
       <div id="modal-video"></div>
       <div id="modal-pdf"></div>
+      <div id="modal-links"></div>
       <div id="modal-tags" class="card-tags" style="margin-top:16px;"></div>
       <div id="modal-related" style="margin-top:18px;"></div>
       <div id="modal-admin-actions" style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);display:none;">
@@ -2180,6 +2529,11 @@ nav {
 </div>
 
 <!-- ── ADMIN PANEL ── -->
+<!-- ── EXPLORE PANEL (kiosk home / typing-free navigation) ── -->
+<div id="panel-explore" class="panel">
+  <div class="explore-wrap" id="explore-content"><!-- built by renderExplore() --></div>
+</div>
+
 <div id="panel-admin" class="panel">
   <div class="panel-inner">
     <div class="admin-panel-content">
@@ -2349,9 +2703,12 @@ nav {
           <div class="search-field">
             <label>Channel Source</label>
             <select class="form-select" id="m-source" onchange="renderManageList(1)">
-              <option value="">All Channels</option>
+              <option value="">All Sources</option>
               <option>Today in BAPS History</option>
               <option>Satpurush in UK & Europe</option>
+              <option>Sampradaya Timeline</option>
+              <option>PSM Vicharan</option>
+              <option>MSM Vicharan</option>
             </select>
           </div>
         </div>
@@ -2970,6 +3327,37 @@ nav {
 
 </div><!-- #app -->
 
+<!-- ── ATTRACT SCREEN (kiosk idle state) ── -->
+<div id="attract-overlay">
+  <img class="attract-photo" id="attract-photo-a" alt="">
+  <img class="attract-photo" id="attract-photo-b" alt="">
+  <div class="attract-scrim"></div>
+  <div class="attract-brand"><div class="ab-main">BAPS HISTORY</div></div>
+  <div class="attract-caption">
+    <div class="attract-date" id="attract-date"></div>
+    <div class="attract-title" id="attract-title"></div>
+  </div>
+  <div class="attract-prompt">✦ &nbsp;Touch to explore&nbsp; ✦</div>
+</div>
+
+<!-- ── STORY MODE (full-screen guided thread player) ── -->
+<div id="story-overlay">
+  <img class="story-bg hidden" id="story-bg" alt="">
+  <div class="story-scrim"></div>
+  <div class="story-bar" id="story-bar" style="width:0%"></div>
+  <div class="story-progress" id="story-progress"></div>
+  <button class="story-close" onclick="closeStory()" title="Close (Esc)">✕</button>
+  <button class="story-nav prev" id="story-prev" onclick="storyNav(-1)" title="Previous (←)">‹</button>
+  <button class="story-nav next" id="story-next" onclick="storyNav(1)" title="Next (→)">›</button>
+  <div class="story-content" id="story-content"></div>
+</div>
+
+<!-- ── QUIZ MODE ── -->
+<div id="quiz-overlay">
+  <button class="story-close" onclick="closeQuiz()" title="Close (Esc)">✕</button>
+  <div class="quiz-wrap" id="quiz-wrap"></div>
+</div>
+
 <script>
 // ═══════════════════════════════════════════════════
 // DATA — injected at build time
@@ -3060,6 +3448,21 @@ function formatGregShort(dateStr) {
   return dt.toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
 }
 
+// Precision-aware date label. Events with date_precision 'year' show just
+// "1824"; 'month' shows "August 1824"; full-precision events fall through
+// to the normal formatters. Pass long=true for the weekday-included form.
+function formatEventDate(ev, long) {
+  const p = ev.date_precision;
+  if (p && p !== 'day' && ev.date) {
+    const [y, m] = ev.date.split('-').map(Number);
+    if (p === 'month') {
+      return new Date(y, m - 1, 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+    }
+    return String(y); // 'year' precision
+  }
+  return long ? formatGreg(ev.date) : formatGregShort(ev.date);
+}
+
 function formatTithi(ev) {
   const td = ev.td || {};
   const sv = getDisplaySamvat(td, ev.date);
@@ -3100,6 +3503,9 @@ function getTithiForDate(dateStr) {
 // if ev.td is missing. Returns null if not found.
 function getTithiLive(ev) {
   if (ev.td && ev.td.guj_month) return ev.td;
+  // Approximate dates (date_precision 'month'/'year') use a placeholder day,
+  // so a live lookup would fabricate a tithi that was never recorded.
+  if (ev.date_precision && ev.date_precision !== 'day') return null;
   // Try live lookup from packed data
   return getTithiForDate(ev.date);
 }
@@ -3232,10 +3638,23 @@ function visibleEvents() {
   return events.filter(e => !e.sensitive);
 }
 
-function makeDateGraphic(dateStr) {
+function makeDateGraphic(dateStr, precision) {
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   if (!dateStr) return `<div class="card-date-graphic"><div class="dg-month">—</div></div>`;
   const [y, m, d] = dateStr.split('-').map(Number);
+  // Approximate dates: hide the placeholder parts we don't actually know.
+  if (precision === 'year') {
+    return `<div class="card-date-graphic">
+      <div class="dg-month">✦</div>
+      <div class="dg-year">${y}</div>
+    </div>`;
+  }
+  if (precision === 'month') {
+    return `<div class="card-date-graphic">
+      <div class="dg-month">${months[(m||1)-1]}</div>
+      <div class="dg-year">${y}</div>
+    </div>`;
+  }
   return `<div class="card-date-graphic">
     <div class="dg-month">${months[(m||1)-1]}</div>
     <div class="dg-day">${d}</div>
@@ -3252,11 +3671,11 @@ function makeCard(ev, onclick, adminButtons=false) {
   const pdf = ev.media?.pdf || [];
 
   // ── Date display ──────────────────────────────────
-  const gregFull = formatGregShort(ev.date); // e.g. "11 May 1961"
+  const gregFull = formatEventDate(ev); // e.g. "11 May 1961", or "1824" for year-precision
   const td = getTithiLive(ev);
   const pancStr = formatPanchang(td, ev.date); // e.g. "Vaishakh · Vad · Ekadashi · VS 2017"
 
-  const dateGraphic = makeDateGraphic(ev.date);
+  const dateGraphic = makeDateGraphic(ev.date, ev.date_precision);
 
   let thumbHtml = '';
   if (photos.length > 0) {
@@ -3284,7 +3703,7 @@ function makeCard(ev, onclick, adminButtons=false) {
   const sensitiveTag = ev.sensitive ? `<span class="tag tag-sensitive">Restricted</span>` : '';
   // Show a source badge only when it differs from the default channel.
   const sourceTag = (ev.tg_source && ev.tg_source !== DEFAULT_TG_SOURCE)
-    ? `<span class="tag" style="background:rgba(92,26,26,0.15);color:var(--maroon-deep);border:1px solid var(--border-strong);" title="Telegram channel">📨 ${ev.tg_source}</span>`
+    ? `<span class="tag" style="background:rgba(92,26,26,0.15);color:var(--maroon-deep);border:1px solid var(--border-strong);" title="Source">${_sourceIcon(ev.tg_source)} ${ev.tg_source}</span>`
     : '';
 
   const mediaIcons = [
@@ -3360,6 +3779,7 @@ function showPanel(name) {
   if (name === 'calendar') renderCalendar();
   if (name === 'map')      renderMap();
   if (name === 'stories')  renderStories();
+  if (name === 'explore')  renderExplore();
   if (name === 'search') { searchPage = 1; doSearch(); }
   if (name === 'admin') renderManageList();
 
@@ -3397,9 +3817,18 @@ function renderToday() {
     document.getElementById('tithi-extra').textContent = '';
   }
 
-  // Events on this exact Gregorian month-day (across all years)
+  // Events on this exact Gregorian month-day (across all years).
+  // Approximate dates (date_precision 'month'/'year') carry a placeholder
+  // day, so they must not surface on a specific calendar day.
+  // Vicharan reports are hidden unless the viewer opts in via the toggle.
+  const showVich = localStorage.getItem('baps_today_vicharan') === '1';
+  const vichToggle = document.getElementById('today-vicharan-toggle');
+  if (vichToggle) vichToggle.checked = showVich;
   const mdStr = todayStr.slice(5); // MM-DD
-  const todayEvents = visibleEvents().filter(e => e.date && e.date.slice(5) === mdStr);
+  const todayEvents = visibleEvents().filter(e =>
+    e.date && e.date.slice(5) === mdStr &&
+    (!e.date_precision || e.date_precision === 'day') &&
+    (showVich || !isVicharan(e)));
   renderEventGrid('today-events-grid', todayEvents, 1, 'search');
   document.getElementById('today-count').textContent = todayEvents.length;
 
@@ -3417,6 +3846,7 @@ function renderToday() {
   let tithiEvents = [];
   if (ti) {
     tithiEvents = visibleEvents().filter(e => {
+      if (!showVich && isVicharan(e)) return false;
       const etd = getTithiLive(e);
       return etd && etd.guj_month === ti.guj_month && etd.sud_vad === ti.sud_vad && etd.tithi === ti.tithi && e.date !== todayStr;
     });
@@ -3483,7 +3913,22 @@ function applyFilters(prefix, baseArray) {
     (e.location||'').toLowerCase().includes(kw) ||
     (e.tithi||'').toLowerCase().includes(kw)
   );
-  if (exactDate) results = results.filter(e => e.date === exactDate);
+  if (exactDate) results = results.filter(e => e.date === exactDate && (!e.date_precision || e.date_precision === 'day'));
+
+  const dFrom = document.getElementById(prefix+'-date-from')?.value || '';
+  const dTo   = document.getElementById(prefix+'-date-to')?.value || '';
+  if (dFrom || dTo) {
+    const lo = dFrom || '0000-01-01', hi = dTo || '9999-12-31';
+    results = results.filter(e => {
+      if (!e.date) return false;
+      // Compare at the precision we actually know: a year-only event
+      // matches on its year, month-precision on its year-month.
+      const prec = e.date_precision || 'day';
+      if (prec === 'year')  return e.date.slice(0,4) >= lo.slice(0,4) && e.date.slice(0,4) <= hi.slice(0,4);
+      if (prec === 'month') return e.date.slice(0,7) >= lo.slice(0,7) && e.date.slice(0,7) <= hi.slice(0,7);
+      return e.date >= lo && e.date <= hi;
+    });
+  }
   if (gm) results = results.filter(e => e.td && e.td.guj_month === gm);
   if (tithi) results = results.filter(e => e.td && e.td.tithi === tithi);
   if (sv) results = results.filter(e => e.td && e.td.sud_vad === sv);
@@ -3497,10 +3942,14 @@ function applyFilters(prefix, baseArray) {
     results = results.filter(e => {
       if (!e.date) return false;
       const [y, m, d] = e.date.split('-').map(Number);
+      // Approximate dates: only the known parts may match. A year-precision
+      // event's placeholder "01-01" must not satisfy month/day filters.
+      const prec = e.date_precision || 'day';
       if (gYear && y !== gYear) return false;
-      if (gMonth && m !== parseInt(gMonth)) return false;
-      if (gDateNum && d !== parseInt(gDateNum)) return false;
+      if (gMonth && (prec === 'year' || m !== parseInt(gMonth))) return false;
+      if (gDateNum && (prec !== 'day' || d !== parseInt(gDateNum))) return false;
       if (gDay !== "") {
+        if (prec !== 'day') return false;
         const dt = new Date(y, m-1, d);
         if (dt.getDay() !== parseInt(gDay)) return false;
       }
@@ -3559,7 +4008,7 @@ function doSearch(resetPage) {
 }
 
 function resetSearch() {
-  ['keyword','date','guj-month','tithi','sudvad','guru','type','greg-day','greg-month','greg-date-num','greg-year','samvat','year-from','year-to'].forEach(id => {
+  ['keyword','date','date-from','date-to','guj-month','tithi','sudvad','guru','type','greg-day','greg-month','greg-date-num','greg-year','samvat','year-from','year-to'].forEach(id => {
     const el = document.getElementById('s-'+id);
     if(el) el.value = '';
   });
@@ -3628,7 +4077,7 @@ function ssRender() {
   // Edit bar (manage mode only)
   let editBar = '';
   if (isManage && isAdmin) {
-    const ALL_GURUS = ['Bhagwan Swaminarayan','Gunatitanand Swami','Bhagatji Maharaj',
+    const ALL_GURUS = ['Ramanand Swami','Bhagwan Swaminarayan','Gunatitanand Swami','Bhagatji Maharaj',
       'Shastriji Maharaj','Yogiji Maharaj','Pramukh Swami Maharaj','Mahant Swami Maharaj'];
     const evGurus = ev.gurus || [];
     const evTypes = ev.types || [];
@@ -4800,32 +5249,56 @@ async function renderMap() {
   setTimeout(() => _mapLeaflet && _mapLeaflet.invalidateSize(), 100);
 }
 
-function renderTimeline() {
-  const evs = sortResults([...visibleEvents()], _tlSort);
-  const list = document.getElementById('timeline-list');
-  list.innerHTML = evs.map(ev => {
-    const td = getTithiLive(ev);
-    const pancStr = td ? formatPanchang(td, ev.date) : (ev.tithi || '');
-    const title = getEventTitle(ev);
-    const thumb = (ev.media?.photos||[])[0];
-    const thumbHtml = thumb
-      ? `<img src="${thumb}" alt="" style="width:56px;height:56px;object-fit:cover;border-radius:3px;flex-shrink:0;border:1px solid var(--border);" onerror="this.style.display='none'">`
-      : `<div style="width:56px;height:56px;border-radius:3px;flex-shrink:0;border:1px solid var(--border);background:var(--maroon-dark);display:flex;align-items:center;justify-content:center;color:var(--gold-dim);font-size:20px;">✦</div>`;
-    return `<div class="timeline-item">
-      <div class="timeline-year">${ev.year||''}</div>
-      <div class="timeline-dot"></div>
-      <div class="timeline-card" onclick="openModal('${ev.id}')" style="display:flex;gap:12px;align-items:flex-start;">
-        ${thumbHtml}
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:12px;color:var(--gold-dim);font-weight:700;letter-spacing:0.06em;margin-bottom:2px;">${formatGregShort(ev.date)}</div>
-          ${pancStr ? `<div style="font-size:11px;color:var(--maroon-light);margin-bottom:4px;">☸ ${pancStr}</div>` : ''}
-          <div style="font-family:'Cormorant Garamond',serif;font-size:16px;font-weight:600;color:var(--text-dark);line-height:1.3;margin-bottom:4px;">${title}</div>
-          ${ev.location ? `<div style="font-size:12px;color:var(--text-muted);">📍 ${ev.location}</div>` : ''}
-          <div class="card-tags" style="margin-top:6px;">${(ev.gurus||[]).map(g=>`<span class="tag tag-guru">${g.split(' ').pop()}</span>`).join('')}</div>
-        </div>
+// Timeline renders in chunks — the corpus is large enough (~8k events)
+// that building every row at once would freeze low-power kiosk hardware.
+const TL_CHUNK = 300;
+let _tlEvs = [];
+
+function _tlItemHtml(ev) {
+  const td = getTithiLive(ev);
+  const pancStr = td ? formatPanchang(td, ev.date) : (ev.tithi || '');
+  const title = getEventTitle(ev);
+  const thumb = (ev.media?.photos||[])[0];
+  const thumbHtml = thumb
+    ? `<img src="${thumb}" alt="" loading="lazy" style="width:56px;height:56px;object-fit:cover;border-radius:3px;flex-shrink:0;border:1px solid var(--border);" onerror="this.style.display='none'">`
+    : `<div style="width:56px;height:56px;border-radius:3px;flex-shrink:0;border:1px solid var(--border);background:var(--maroon-dark);display:flex;align-items:center;justify-content:center;color:var(--gold-dim);font-size:20px;">✦</div>`;
+  return `<div class="timeline-item">
+    <div class="timeline-year">${ev.year||''}</div>
+    <div class="timeline-dot"></div>
+    <div class="timeline-card" onclick="openModal('${ev.id}')" style="display:flex;gap:12px;align-items:flex-start;">
+      ${thumbHtml}
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:12px;color:var(--gold-dim);font-weight:700;letter-spacing:0.06em;margin-bottom:2px;">${formatEventDate(ev)}</div>
+        ${pancStr ? `<div style="font-size:11px;color:var(--maroon-light);margin-bottom:4px;">☸ ${pancStr}</div>` : ''}
+        <div style="font-family:'Cormorant Garamond',serif;font-size:16px;font-weight:600;color:var(--text-dark);line-height:1.3;margin-bottom:4px;">${title}</div>
+        ${ev.location ? `<div style="font-size:12px;color:var(--text-muted);">📍 ${ev.location}</div>` : ''}
+        <div class="card-tags" style="margin-top:6px;">${(ev.gurus||[]).map(g=>`<span class="tag tag-guru">${g.split(' ').pop()}</span>`).join('')}</div>
       </div>
-    </div>`;
-  }).join('');
+    </div>
+  </div>`;
+}
+
+function _tlMoreHtml(shown) {
+  const remaining = _tlEvs.length - shown;
+  if (remaining <= 0) return '';
+  return `<div id="tl-more" style="text-align:center;padding:20px;">
+    <button class="save-btn" style="min-height:46px;padding:12px 28px;" onclick="_tlShowMore(${shown})">▼ Show ${Math.min(TL_CHUNK, remaining)} more (${remaining} remaining)</button>
+  </div>`;
+}
+
+function _tlShowMore(shown) {
+  const more = document.getElementById('tl-more');
+  if (!more) return;
+  more.outerHTML = _tlEvs.slice(shown, shown + TL_CHUNK).map(_tlItemHtml).join('') + _tlMoreHtml(shown + TL_CHUNK);
+}
+
+function renderTimeline() {
+  renderEraScrubber();
+  let base = visibleEvents();
+  if (_tlEra) base = base.filter(e => e.year >= _tlEra.from && e.year <= _tlEra.to);
+  _tlEvs = sortResults([...base], _tlSort);
+  const list = document.getElementById('timeline-list');
+  list.innerHTML = _tlEvs.slice(0, TL_CHUNK).map(_tlItemHtml).join('') + _tlMoreHtml(TL_CHUNK);
 }
 
 // ═══════════════════════════════════════════════════
@@ -4856,7 +5329,7 @@ function openModal(evId) {
   const title = getEventTitle(ev);
   const displaySV = getDisplaySamvat(td, ev.date);
 
-  document.getElementById('modal-greg').textContent = formatGreg(ev.date);
+  document.getElementById('modal-greg').textContent = formatEventDate(ev, true);
   document.getElementById('modal-tithi').textContent = tithi ? `· ${tithi}` : '';
   document.getElementById('modal-samvat').textContent = displaySV ? `· Samvat ${displaySV}` : '';
   document.getElementById('modal-title').textContent = title;
@@ -4910,6 +5383,16 @@ function openModal(evId) {
   const pdfEl = document.getElementById('modal-pdf');
   const pdfs = ev.media?.pdf || [];
   pdfEl.innerHTML = pdfs.map(p => `<a class="video-link" href="${p.file}" target="_blank" style="color:var(--maroon);border-color:rgba(92,26,26,0.3);background:rgba(92,26,26,0.06);">📄 ${p.caption||p.file.split('/').pop()}</a>`).join('');
+
+  // External links (e.g. source article on baps.org). Hidden in kiosk mode,
+  // where navigation away from the app is blocked anyway.
+  const linksEl = document.getElementById('modal-links');
+  const links = (ev.media?.links || []).filter(Boolean);
+  linksEl.innerHTML = (typeof IS_KIOSK !== 'undefined' && IS_KIOSK) ? '' : links.map(l => {
+    const url = typeof l === 'string' ? l : l.url;
+    const title = typeof l === 'string' ? 'Source article' : (l.title || 'Source article');
+    return `<a class="video-link" href="${url}" target="_blank" rel="noopener" style="color:var(--maroon);border-color:rgba(92,26,26,0.3);background:rgba(92,26,26,0.06);">🔗 ${title}</a>`;
+  }).join('');
 
   // Tags
   const tagsEl = document.getElementById('modal-tags');
@@ -5639,7 +6122,7 @@ function renderManageListView(evs, page) {
   }
 
   const ALL_GURUS = [
-    'Bhagwan Swaminarayan','Gunatitanand Swami','Bhagatji Maharaj',
+    'Ramanand Swami','Bhagwan Swaminarayan','Gunatitanand Swami','Bhagatji Maharaj',
     'Shastriji Maharaj','Yogiji Maharaj','Pramukh Swami Maharaj','Mahant Swami Maharaj'
   ];
 
@@ -5653,7 +6136,7 @@ function renderManageListView(evs, page) {
 
   const rows = slice.map(ev => {
     const title = getEventTitle(ev) || '(no description)';
-    const gregFull = formatGregShort(ev.date);
+    const gregFull = formatEventDate(ev);
     const td = getTithiLive(ev);
     const pancStr = td ? `${td.guj_month} ${td.sud_vad} ${td.tithi}` : (ev.tithi || '');
     const loc = ev.location || '';
@@ -5925,7 +6408,7 @@ function openEditModal(evId) {
   document.getElementById('eem-sensitive').checked = !!ev.sensitive;
 
   const ALL_GURUS = [
-    'Bhagwan Swaminarayan','Gunatitanand Swami','Bhagatji Maharaj',
+    'Ramanand Swami','Bhagwan Swaminarayan','Gunatitanand Swami','Bhagatji Maharaj',
     'Shastriji Maharaj','Yogiji Maharaj','Pramukh Swami Maharaj','Mahant Swami Maharaj'
   ];
   const evGurus = ev.gurus || [];
@@ -5948,6 +6431,14 @@ function openEditModal(evId) {
   html += [['gregorian','Gregorian'],['panchang','Hindu Panchang'],['both','Both']].map(([val,lbl]) => `
     <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-dark);cursor:pointer;padding:4px 6px;border-radius:2px;" onmouseover="this.style.background='rgba(0,0,0,0.03)'" onmouseout="this.style.background='transparent'">
       <input type="radio" name="eem-dt" value="${val}" style="accent-color:var(--maroon);width:15px;height:15px;" ${curDT===val ? 'checked' : ''}> ${lbl}
+    </label>`).join('');
+
+  const curPrec = ev.date_precision || 'day';
+  html += `<div style="font-weight:bold;margin-top:12px;margin-bottom:4px;color:var(--gold-dark);border-bottom:1px solid var(--border);">Date Precision</div>`;
+  html += `<div style="font-size:11px;color:var(--text-muted);padding:2px 6px 4px;">For approximate dates the day (and month) above is a placeholder; such events show only the known part and stay off the day-keyed Today view.</div>`;
+  html += [['day','Exact day'],['month','Month + year only'],['year','Year only']].map(([val,lbl]) => `
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-dark);cursor:pointer;padding:4px 6px;border-radius:2px;" onmouseover="this.style.background='rgba(0,0,0,0.03)'" onmouseout="this.style.background='transparent'">
+      <input type="radio" name="eem-prec" value="${val}" style="accent-color:var(--maroon);width:15px;height:15px;" ${curPrec===val ? 'checked' : ''}> ${lbl}
     </label>`).join('');
 
   document.getElementById('eem-checkboxes').innerHTML = html;
@@ -5995,6 +6486,9 @@ function saveEditModal() {
   ev.types = Array.from(document.querySelectorAll('#eem-checkboxes .eem-cb-cat:checked')).map(cb => cb.value);
   const dtSel = document.querySelector('#eem-checkboxes input[name="eem-dt"]:checked');
   ev.date_type = dtSel ? dtSel.value : 'both';
+  const precSel = document.querySelector('#eem-checkboxes input[name="eem-prec"]:checked');
+  const prec = precSel ? precSel.value : 'day';
+  if (prec === 'day') delete ev.date_precision; else ev.date_precision = prec;
 
   _audit('event-edit', `${ev.id} · ${ev.date} · ${(ev.desc || '').slice(0, 60)}`);
   closeEditModal();
@@ -6588,7 +7082,7 @@ function _simEventCard(ev, side) {
     (m.youtube?.length||0)? `▶ ${m.youtube.length}` : '',
     (m.pdf?.length||0)    ? `📎 ${m.pdf.length}` : ''
   ].filter(Boolean).join(' · ');
-  const src = (ev.tg_source && ev.tg_source !== DEFAULT_TG_SOURCE) ? `<span style="font-size:11px;background:rgba(92,26,26,0.15);color:var(--maroon-deep);padding:1px 6px;border-radius:2px;margin-left:6px;">📨 ${ev.tg_source}</span>` : '';
+  const src = (ev.tg_source && ev.tg_source !== DEFAULT_TG_SOURCE) ? `<span style="font-size:11px;background:rgba(92,26,26,0.15);color:var(--maroon-deep);padding:1px 6px;border-radius:2px;margin-left:6px;">${_sourceIcon(ev.tg_source)} ${ev.tg_source}</span>` : '';
   const tg  = ev.tg_id != null ? ` · tg:${ev.tg_id}` : '';
   return `<div style="padding:14px;border:1px solid var(--border-strong);border-radius:3px;background:var(--cream);min-height:160px;">
     <div style="font-size:12px;color:var(--maroon-deep);font-weight:600;">${ev.date || '?'}${tg}${src}</div>
@@ -6819,6 +7313,17 @@ function convertTelegramExport(obj) {
 // ── Source-aware helpers (multi-channel result.json) ──
 const DEFAULT_TG_SOURCE = 'Today in BAPS History';
 function tgSourceOf(ev) { return ev?.tg_source || DEFAULT_TG_SOURCE; }
+
+// Day-by-day travel-report sources. Excluded from the Today panel by
+// default (viewer toggle) and from the quiz pool — they are reference
+// material, not curated history.
+const VICHARAN_SOURCES = new Set(['PSM Vicharan', 'MSM Vicharan']);
+function isVicharan(ev) { return VICHARAN_SOURCES.has(ev?.tg_source); }
+function _sourceIcon(src) {
+  if (src === 'Sampradaya Timeline') return '📜';
+  if (VICHARAN_SOURCES.has(src)) return '🧭';
+  return '📨';
+}
 function tgSourceOfMsg(m, fallback) { return m?._source || fallback || DEFAULT_TG_SOURCE; }
 function tgKey(source, id) { return `${source}|${id}`; }
 
@@ -8499,8 +9004,568 @@ fetch(`events.json?_t=${Date.now()}`, { cache: 'no-store' })
     });
     // Deep-link: if URL has #event=evt-XXX, open that event's modal after data load.
     handleDeepLink();
+    // Published builds split heavy reference layers (vicharan archives)
+    // into separate files listed in data.lazy — fetch them in the
+    // background so first paint only needs the curated corpus.
+    _loadLazyLayers(data);
   })
   .catch(err => console.error('Failed to load events.json:', err));
+
+// ── Lazy data layers ─────────────────────────────────
+async function _loadLazyLayers(data) {
+  const layers = Array.isArray(data.lazy) ? data.lazy : [];
+  for (const url of layers) {
+    try {
+      const resp = await fetch(`${url}?_t=${Date.now()}`, { cache: 'no-store' });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const extra = await resp.json();
+      const list = Array.isArray(extra) ? extra : (extra.events || []);
+      const have = new Set(events.map(e => e.id));
+      const fresh = list.filter(e => e && e.id && !have.has(e.id));
+      events.push(...fresh);
+      EVENTS_DATA = events;
+      console.log(`Lazy layer ${url}: +${fresh.length} events (total ${events.length})`);
+    } catch (err) {
+      console.warn('Lazy layer failed to load:', url, err);
+    }
+  }
+  if (layers.length) {
+    _refreshCurrentPanel();
+    // A deep link may target an event that only just arrived.
+    handleDeepLink();
+  }
+}
+
+function _refreshCurrentPanel() {
+  // Re-render the panel in place (no scroll reset — the viewer may be
+  // mid-browse when the lazy layer lands).
+  const p = currentPanel;
+  if (p === 'today') renderToday();
+  else if (p === 'search') doSearch();
+  else if (p === 'gurus') renderGuruPanel();
+  else if (p === 'gallery') renderGallery();
+  else if (p === 'timeline') renderTimeline();
+  else if (p === 'calendar') renderCalendar();
+  else if (p === 'map') renderMap();
+  else if (p === 'stories') renderStories();
+  else if (p === 'explore') renderExplore();
+}
+
+// ═══════════════════════════════════════════════════
+// KIOSK MODE (Phase 1)
+// Enable with ?kiosk=1  ·  optional ?idle=120 (seconds before attract
+// screen, default 90). Example launch:
+//   msedge --kiosk "http://localhost:8000/?kiosk=1" --edge-kiosk-type=fullscreen
+// ═══════════════════════════════════════════════════
+const KIOSK_PARAMS = new URLSearchParams(location.search);
+const IS_KIOSK = KIOSK_PARAMS.get('kiosk') === '1';
+const KIOSK_IDLE_MS = Math.max(20, parseInt(KIOSK_PARAMS.get('idle')) || 90) * 1000;
+
+if (IS_KIOSK) {
+  document.body.classList.add('kiosk');
+  // Kiosk always lands on Explore (overrides any saved panel from a reload).
+  try { sessionStorage.setItem('baps_current_panel', 'explore'); } catch (e) {}
+  // No pinch/double-tap zoom on a shared screen.
+  const vp = document.querySelector('meta[name="viewport"]');
+  if (vp) vp.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+  // No long-press context menu.
+  document.addEventListener('contextmenu', e => e.preventDefault());
+  // Block navigation away to external sites (YouTube watch links etc.).
+  document.addEventListener('click', e => {
+    const a = e.target && e.target.closest ? e.target.closest('a[href^="http"]') : null;
+    if (a) { e.preventDefault(); e.stopPropagation(); }
+  }, true);
+}
+
+// ── Idle detection + attract screen ─────────────────
+let _idleTimer = null;
+let _attractTimer = null;
+let _attractPool = [];
+let _attractIdx = 0;
+let _attractLayer = 0; // which of the two stacked photos is visible
+
+function _attractActive() {
+  return document.getElementById('attract-overlay').classList.contains('active');
+}
+
+function _resetIdle() {
+  if (!IS_KIOSK || _attractActive()) return;
+  if (_idleTimer) clearTimeout(_idleTimer);
+  _idleTimer = setTimeout(startAttract, KIOSK_IDLE_MS);
+}
+
+function _shuffled(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function startAttract() {
+  if (!IS_KIOSK || _attractActive()) return;
+  if (isAdmin || !events.length) { _resetIdle(); return; }
+  if (!_attractPool.length) {
+    _attractPool = _shuffled(visibleEvents().filter(e => (e.media?.photos || []).length));
+  }
+  if (!_attractPool.length) { _resetIdle(); return; }
+  if (_idleTimer) clearTimeout(_idleTimer);
+  document.getElementById('attract-overlay').classList.add('active');
+  _attractStep();
+  _attractTimer = setInterval(_attractStep, 7000);
+}
+
+function _attractStep() {
+  if (document.hidden) return; // don't churn while tab is invisible
+  const ev = _attractPool[_attractIdx % _attractPool.length];
+  _attractIdx++;
+  const showEl = document.getElementById(_attractLayer === 0 ? 'attract-photo-a' : 'attract-photo-b');
+  const hideEl = document.getElementById(_attractLayer === 0 ? 'attract-photo-b' : 'attract-photo-a');
+  _attractLayer = 1 - _attractLayer;
+  showEl.src = ev.media.photos[0];
+  showEl.onerror = () => { showEl.classList.remove('show'); };
+  showEl.classList.add('show');
+  hideEl.classList.remove('show');
+  document.getElementById('attract-date').textContent = formatEventDate(ev);
+  document.getElementById('attract-title').textContent = getEventTitle(ev);
+  // Preload the next photo so the crossfade never shows a blank frame.
+  const next = _attractPool[_attractIdx % _attractPool.length];
+  if (next) { const pre = new Image(); pre.src = next.media.photos[0]; }
+}
+
+function stopAttract() {
+  document.getElementById('attract-overlay').classList.remove('active');
+  if (_attractTimer) { clearInterval(_attractTimer); _attractTimer = null; }
+  // Reset the app to a clean state for the next visitor.
+  try { if (typeof closeSlideshow === 'function') closeSlideshow(); } catch (e) {}
+  try { if (typeof closeModal === 'function') closeModal(); } catch (e) {}
+  try { if (typeof closeStory === 'function') closeStory(); } catch (e) {}
+  try { if (typeof closeQuiz === 'function') closeQuiz(); } catch (e) {}
+  showPanel('explore');
+  _resetIdle();
+}
+
+if (IS_KIOSK) {
+  document.getElementById('attract-overlay').addEventListener('pointerdown', e => {
+    e.preventDefault(); stopAttract();
+  });
+  ['pointerdown', 'pointermove', 'keydown', 'wheel', 'touchstart', 'scroll'].forEach(evt =>
+    window.addEventListener(evt, _resetIdle, { passive: true }));
+  _resetIdle();
+}
+
+// ── Explore panel (typing-free navigation) ───────────
+const EXPLORE_ERAS = [
+  { label: 'Early Sampradaya',        sub: 'Ramanand Swami & the Vairagis', from: 1739, to: 1780, icon: '🪔' },
+  { label: 'Bhagwan Swaminarayan',    sub: 'Avirbhav to Akshardham',        from: 1781, to: 1830, icon: '☀️' },
+  { label: 'Gunatitanand Swami',      sub: 'Junagadh & the Aksharbrahma',   from: 1831, to: 1867, icon: '🕉️' },
+  { label: 'Bhagatji Maharaj',        sub: 'The devoted tailor of Mahuva',  from: 1868, to: 1897, icon: '🧵' },
+  { label: 'Shastriji Maharaj',       sub: 'The founding of BAPS',          from: 1898, to: 1951, icon: '🛕' },
+  { label: 'Yogiji Maharaj',          sub: 'Satsang goes global',           from: 1952, to: 1971, icon: '🌍' },
+  { label: 'Pramukh Swami Maharaj',   sub: 'Mandirs across the world',      from: 1972, to: 2016, icon: '🙏' },
+  { label: 'Mahant Swami Maharaj',    sub: 'The present era',               from: 2017, to: 9999, icon: '✨' },
+];
+
+function renderExplore() {
+  const evs = visibleEvents();
+  const todayStr = dateToStr(new Date());
+  const mdStr = todayStr.slice(5);
+  const todayCount = evs.filter(e => e.date && e.date.slice(5) === mdStr && (!e.date_precision || e.date_precision === 'day')).length;
+  const threads = Array.isArray(window._THREADS) ? window._THREADS.length : 0;
+
+  const quick = [
+    { icon: '📅', title: 'Today in History', sub: 'What happened on this day', count: todayCount, act: "showPanel('today')" },
+    { icon: '📖', title: 'Stories',          sub: 'Curated journeys through history', count: threads, act: "showPanel('stories')" },
+    { icon: '🕰️', title: 'Timeline',         sub: 'Every event, oldest to newest', count: evs.length, act: "showPanel('timeline')" },
+    { icon: '🖼️', title: 'Gallery',          sub: 'Browse the photo archive', count: null, act: "showPanel('gallery')" },
+    { icon: '🗺️', title: 'Map',              sub: 'Events by place', count: null, act: "showPanel('map')" },
+    { icon: '🎯', title: 'Quiz',             sub: 'Test your knowledge — 10 questions', count: null, act: 'startQuiz()' },
+    { icon: '🎲', title: 'Surprise Me',      sub: 'A random moment in history', count: null, act: 'showRandomEvent()' },
+  ];
+
+  const quickHtml = quick.map(q => `
+    <div class="explore-tile" onclick="${q.act}">
+      ${q.count != null ? `<span class="et-count">${q.count}</span>` : ''}
+      <div class="et-icon">${q.icon}</div>
+      <div class="et-title">${q.title}</div>
+      <div class="et-sub">${q.sub}</div>
+    </div>`).join('');
+
+  const eraHtml = EXPLORE_ERAS.map(era => {
+    const n = evs.filter(e => e.year >= era.from && e.year <= era.to).length;
+    if (!n) return '';
+    const toLbl = era.to === 9999 ? 'today' : era.to;
+    return `
+    <div class="explore-tile" onclick="exploreEra(${era.from}, ${era.to === 9999 ? new Date().getFullYear() : era.to})">
+      <span class="et-count">${n}</span>
+      <div class="explore-era-band"></div>
+      <div class="et-icon">${era.icon}</div>
+      <div class="et-title">${era.label}</div>
+      <div class="et-sub">${era.from} – ${toLbl} · ${era.sub}</div>
+    </div>`;
+  }).join('');
+
+  const catCounts = {};
+  evs.forEach(e => (e.types || []).forEach(t => { catCounts[t] = (catCounts[t] || 0) + 1; }));
+  const catHtml = EVENT_CATEGORIES
+    .filter(c => catCounts[c])
+    .sort((a, b) => catCounts[b] - catCounts[a])
+    .map(c => `<div class="explore-chip" onclick="exploreCategory('${c.replace(/'/g, "\\'")}')">${c}<span class="ec-n">${catCounts[c]}</span></div>`)
+    .join('');
+
+  document.getElementById('explore-content').innerHTML = `
+    <div class="explore-heading">Begin Here</div>
+    <div class="explore-grid">${quickHtml}</div>
+    <div class="explore-heading">Explore by Era</div>
+    <div class="explore-grid">${eraHtml}</div>
+    <div class="explore-heading">Explore by Theme</div>
+    <div class="explore-chips">${catHtml}</div>`;
+}
+
+function _clearSearchFields() {
+  ['keyword','date','date-from','date-to','guj-month','tithi','sudvad','guru','type','greg-day','greg-month',
+   'greg-date-num','greg-year','samvat','year-from','year-to','source'].forEach(id => {
+    const el = document.getElementById('s-' + id);
+    if (el) el.value = '';
+  });
+}
+
+function exploreEra(from, to) {
+  showPanel('search');
+  _clearSearchFields();
+  const f = document.getElementById('s-year-from'), t = document.getElementById('s-year-to');
+  if (f) f.value = from;
+  if (t) t.value = to;
+  const sort = document.getElementById('s-sort');
+  if (sort) sort.value = 'greg-asc';
+  doSearch(true);
+}
+
+function exploreCategory(cat) {
+  showPanel('search');
+  _clearSearchFields();
+  const sel = document.getElementById('s-type');
+  if (sel) sel.value = cat;
+  doSearch(true);
+}
+
+// ═══════════════════════════════════════════════════
+// STORY MODE — full-screen guided player for threads
+// ═══════════════════════════════════════════════════
+let _storyEvs = [];
+let _storyThread = null;
+let _storyIdx = -1; // -1 = intro slide, _storyEvs.length = end slide
+
+function startStory(threadId) {
+  const t = (window._THREADS || []).find(x => x.id === threadId);
+  if (!t) return;
+  _storyThread = t;
+  _storyEvs = (t.eventIds || []).map(id => events.find(e => e.id === id))
+    .filter(Boolean).filter(e => !e.sensitive);
+  if (!_storyEvs.length) return;
+  _storyIdx = -1;
+  document.getElementById('story-overlay').classList.add('active');
+  _storyRender();
+}
+
+function closeStory() {
+  document.getElementById('story-overlay').classList.remove('active');
+  _storyThread = null; _storyEvs = [];
+}
+
+function storyNav(d) {
+  if (!_storyThread) return;
+  const next = _storyIdx + d;
+  if (next < -1 || next > _storyEvs.length) return;
+  _storyIdx = next;
+  _storyRender();
+}
+
+function _storyRender() {
+  const esc = s => String(s || '').replace(/</g, '&lt;');
+  const n = _storyEvs.length;
+  const content = document.getElementById('story-content');
+  const bg = document.getElementById('story-bg');
+  const bar = document.getElementById('story-bar');
+  const progress = document.getElementById('story-progress');
+  document.getElementById('story-prev').style.visibility = _storyIdx > -1 ? 'visible' : 'hidden';
+  document.getElementById('story-next').style.visibility = _storyIdx < n ? 'visible' : 'hidden';
+
+  if (_storyIdx === -1) {
+    // Intro slide
+    bg.classList.add('hidden');
+    bar.style.width = '0%';
+    progress.textContent = '';
+    content.innerHTML = `
+      <div class="story-date">A Story in ${n} Part${n === 1 ? '' : 's'}</div>
+      <div class="story-title">${esc(_storyThread.title)}</div>
+      ${_storyThread.description ? `<div class="story-desc">${esc(_storyThread.description)}</div>` : ''}
+      <div style="margin-top:34px;"><button class="story-btn" onclick="storyNav(1)">Begin ›</button></div>`;
+    return;
+  }
+
+  if (_storyIdx === n) {
+    // End slide
+    bg.classList.add('hidden');
+    bar.style.width = '100%';
+    progress.textContent = '';
+    content.innerHTML = `
+      <div class="story-date">The End</div>
+      <div class="story-title">${esc(_storyThread.title)}</div>
+      <div class="story-desc">You journeyed through ${n} moments of history.</div>
+      <div style="margin-top:34px;">
+        <button class="story-btn" onclick="_storyIdx=-1;_storyRender()">↻ Replay</button>
+        <button class="story-btn ghost" onclick="closeStory();showPanel('stories')">All Stories</button>
+      </div>`;
+    return;
+  }
+
+  const ev = _storyEvs[_storyIdx];
+  const photo = (ev.media?.photos || [])[0];
+  if (photo) {
+    bg.src = photo;
+    bg.onerror = () => bg.classList.add('hidden');
+    bg.classList.remove('hidden');
+  } else {
+    bg.classList.add('hidden');
+  }
+  bar.style.width = `${((_storyIdx + 1) / n) * 100}%`;
+  progress.textContent = `${_storyIdx + 1}  ·  ${n}`;
+  const td = getTithiLive(ev);
+  const panc = td ? formatPanchang(td, ev.date) : '';
+  const body = (typeof getDesc === 'function' ? getDesc(ev) : ev.desc) || '';
+  content.innerHTML = `
+    <div class="story-date">${formatEventDate(ev)}${panc ? `<span style="opacity:0.7;font-size:0.75em;letter-spacing:0.1em;"> &nbsp;·&nbsp; ${panc}</span>` : ''}</div>
+    <div class="story-title">${esc(getEventTitle(ev))}</div>
+    <div class="story-desc">${esc(body).replace(/\n+/g, '<br><br>')}</div>
+    ${ev.location ? `<div style="margin-top:16px;font-family:'Lato',sans-serif;font-size:14px;color:var(--gold-dim);letter-spacing:0.08em;">📍 ${esc(ev.location)}</div>` : ''}`;
+}
+
+// Swipe + keyboard for story mode
+(function () {
+  const so = document.getElementById('story-overlay');
+  let sx = 0, sy = 0;
+  so.addEventListener('touchstart', e => {
+    if (e.touches.length !== 1) return;
+    sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+  }, { passive: true });
+  so.addEventListener('touchend', e => {
+    const t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    const dx = t.clientX - sx, dy = t.clientY - sy;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > 1.8 * Math.abs(dy)) storyNav(dx < 0 ? 1 : -1);
+  }, { passive: true });
+  document.addEventListener('keydown', e => {
+    if (!so.classList.contains('active')) return;
+    if (e.key === 'ArrowRight') storyNav(1);
+    else if (e.key === 'ArrowLeft') storyNav(-1);
+    else if (e.key === 'Escape') closeStory();
+  });
+})();
+
+// ═══════════════════════════════════════════════════
+// QUIZ MODE — auto-generated from the event data
+// ═══════════════════════════════════════════════════
+const QUIZ_ROUNDS = 10;
+let _quizQs = [];
+let _quizIdx = 0;
+let _quizScore = 0;
+
+function _quizCandidates() {
+  // Vicharan day-reports are excluded — "in which year did a routine
+  // vicharan report happen" is neither fair nor interesting.
+  return visibleEvents().filter(e =>
+    !isVicharan(e) &&
+    e.year && getEventTitle(e).length >= 20 && (!e.date_precision || e.date_precision !== 'year'));
+}
+
+function _buildQuizQuestions() {
+  const cands = _shuffled(_quizCandidates());
+  const qs = [];
+  const usedIds = new Set();
+  const currentYear = new Date().getFullYear();
+  const guruNames = EXPLORE_ERAS.map(e => e.label).filter(g => g !== 'Early Sampradaya');
+
+  // Guru questions only make sense when the answer isn't printed in the text.
+  const guruPool = cands.filter(ev =>
+    (ev.gurus || []).length === 1 &&
+    !getEventTitle(ev).toLowerCase().includes(ev.gurus[0].toLowerCase()));
+  const yearPool = cands;
+
+  const mkGuruQ = (ev) => {
+    const correct = ev.gurus[0];
+    const others = _shuffled(guruNames.filter(g => g !== correct)).slice(0, 3);
+    if (others.length < 3) return null;
+    return { q: 'Which guru is associated with this event?', ev, title: getEventTitle(ev),
+             options: _shuffled([correct, ...others]), correct };
+  };
+
+  const mkYearQ = (ev) => {
+    const correct = ev.year;
+    const opts = new Set([correct]);
+    let guard = 0;
+    while (opts.size < 4 && guard++ < 60) {
+      const spread = 2 + Math.floor(Math.random() * 12);
+      const cand = correct + (Math.random() < 0.5 ? -spread : spread);
+      if (cand >= 1700 && cand <= currentYear) opts.add(cand);
+    }
+    if (opts.size < 4) return null;
+    return { q: 'In which year did this happen?', ev, title: getEventTitle(ev),
+             options: _shuffled([...opts]), correct };
+  };
+
+  let gi = 0, yi = 0;
+  while (qs.length < QUIZ_ROUNDS && (gi < guruPool.length || yi < yearPool.length)) {
+    const wantGuru = qs.length % 3 === 2 && gi < guruPool.length; // every 3rd question
+    let q = null;
+    if (wantGuru) {
+      const ev = guruPool[gi++];
+      if (!usedIds.has(ev.id)) q = mkGuruQ(ev);
+    } else if (yi < yearPool.length) {
+      const ev = yearPool[yi++];
+      if (!usedIds.has(ev.id)) q = mkYearQ(ev);
+    } else if (gi < guruPool.length) {
+      const ev = guruPool[gi++];
+      if (!usedIds.has(ev.id)) q = mkGuruQ(ev);
+    }
+    if (q) { usedIds.add(q.ev.id); qs.push(q); }
+  }
+  return qs;
+}
+
+function startQuiz() {
+  if (!events.length) return;
+  _quizQs = _buildQuizQuestions();
+  if (_quizQs.length < 3) return;
+  _quizIdx = 0; _quizScore = 0;
+  document.getElementById('quiz-overlay').classList.add('active');
+  _quizRender();
+}
+
+function closeQuiz() {
+  document.getElementById('quiz-overlay').classList.remove('active');
+  _quizQs = [];
+}
+
+function _quizRender() {
+  const esc = s => String(s || '').replace(/</g, '&lt;');
+  const wrap = document.getElementById('quiz-wrap');
+
+  if (_quizIdx >= _quizQs.length) {
+    const n = _quizQs.length;
+    const pct = _quizScore / n;
+    const verdict = pct === 1 ? 'Outstanding! A true historian.'
+      : pct >= 0.7 ? 'Very well done!'
+      : pct >= 0.4 ? 'Good effort — explore more and try again!'
+      : 'The timeline awaits you — explore and return!';
+    wrap.innerHTML = `
+      <div class="quiz-counter">QUIZ COMPLETE</div>
+      <div class="quiz-score-big">${_quizScore} / ${n}</div>
+      <div class="quiz-event">${verdict}</div>
+      <div style="margin-top:22px;">
+        <button class="story-btn" onclick="startQuiz()">↻ Play Again</button>
+        <button class="story-btn ghost" onclick="closeQuiz();showPanel('explore')">Explore</button>
+      </div>`;
+    return;
+  }
+
+  const q = _quizQs[_quizIdx];
+  const photo = (q.ev.media?.photos || [])[0];
+  wrap.innerHTML = `
+    <div class="quiz-counter">QUESTION ${_quizIdx + 1} OF ${_quizQs.length} &nbsp;·&nbsp; SCORE ${_quizScore}</div>
+    <div class="quiz-question">${q.q}</div>
+    ${photo ? `<img src="${photo}" alt="" style="max-height:22vh;max-width:80vw;border:1px solid var(--gold-dim);border-radius:3px;margin-bottom:16px;object-fit:contain;" onerror="this.remove()">` : ''}
+    <div class="quiz-event">“${esc(q.title)}”</div>
+    <div class="quiz-options">${q.options.map(o =>
+      `<button class="quiz-opt" onclick="_quizAnswer(this, ${JSON.stringify(String(o)).replace(/"/g, '&quot;')})">${esc(o)}</button>`).join('')}</div>
+    <div class="quiz-feedback" id="quiz-feedback"></div>`;
+}
+
+function _quizAnswer(btn, val) {
+  const q = _quizQs[_quizIdx];
+  const correctStr = String(q.correct);
+  document.querySelectorAll('.quiz-opt').forEach(b => {
+    b.disabled = true;
+    if (b.textContent === correctStr) b.classList.add('correct');
+  });
+  const right = val === correctStr;
+  if (right) _quizScore++;
+  else btn.classList.add('wrong');
+  const fb = document.getElementById('quiz-feedback');
+  fb.innerHTML = `
+    <div style="margin-bottom:12px;">${right ? '✓ Correct!' : `✕ It was <strong>${correctStr}</strong> — ${formatEventDate(q.ev)}`}</div>
+    <button class="story-btn" style="min-height:48px;padding:12px 30px;" onclick="_quizIdx++;_quizRender()">${_quizIdx + 1 >= _quizQs.length ? 'See Score' : 'Next ›'}</button>`;
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.getElementById('quiz-overlay').classList.contains('active')) closeQuiz();
+});
+
+// ═══════════════════════════════════════════════════
+// ERA SCRUBBER — tap an era band to focus the Timeline
+// ═══════════════════════════════════════════════════
+let _tlEra = null; // {from, to, label} or null = all years
+
+function renderEraScrubber() {
+  const holder = document.getElementById('era-scrubber');
+  const status = document.getElementById('era-scrubber-status');
+  if (!holder) return;
+  const evs = visibleEvents();
+  const nowYear = new Date().getFullYear();
+  holder.innerHTML = EXPLORE_ERAS.map((era, i) => {
+    const to = era.to === 9999 ? nowYear : era.to;
+    const n = evs.filter(e => e.year >= era.from && e.year <= era.to).length;
+    if (!n) return '';
+    const active = _tlEra && _tlEra.from === era.from;
+    return `<div class="era-seg${active ? ' active' : ''}" onclick="setTimelineEra(${i})" title="${era.label}">
+      <div class="es-years">${era.from}–${era.to === 9999 ? 'now' : era.to}</div>
+      <div class="es-name">${era.icon} ${era.label}</div>
+      <div class="es-count">${n} events</div>
+    </div>`;
+  }).join('');
+  if (status) {
+    status.innerHTML = _tlEra
+      ? `Showing <strong style="color:var(--gold-light);">${_tlEra.label}</strong> (${_tlEra.from}–${_tlEra.to === 9999 ? 'today' : _tlEra.to})<span class="ess-clear" onclick="setTimelineEra(null)">✕ All years</span>`
+      : `Tap an era to focus the timeline.`;
+  }
+}
+
+function setTimelineEra(idx) {
+  if (idx === null || (_tlEra && EXPLORE_ERAS[idx] && _tlEra.from === EXPLORE_ERAS[idx].from)) {
+    _tlEra = null; // tap the active era again (or ✕) to clear
+  } else {
+    const era = EXPLORE_ERAS[idx];
+    if (!era) return;
+    _tlEra = { from: era.from, to: era.to, label: era.label };
+    // Era browsing reads best oldest-first (set directly; render once below).
+    if (_tlSort === 'greg-desc') {
+      _tlSort = 'greg-asc';
+      document.querySelectorAll('[data-tlsort]').forEach(b => b.classList.toggle('active', b.dataset.tlsort === 'greg-asc'));
+    }
+  }
+  renderTimeline();
+  _scrollToTopHard();
+}
+
+// ── Touch: swipe left/right in the slideshow ─────────
+(function () {
+  const ss = document.getElementById('slideshow-overlay');
+  if (!ss) return;
+  let sx = 0, sy = 0;
+  ss.addEventListener('touchstart', e => {
+    if (e.touches.length !== 1) return;
+    sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+  }, { passive: true });
+  ss.addEventListener('touchend', e => {
+    const t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    const dx = t.clientX - sx, dy = t.clientY - sy;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > 1.8 * Math.abs(dy)) {
+      try { ssNav(dx < 0 ? 1 : -1); } catch (err) {}
+    }
+  }, { passive: true });
+})();
 
 // ── Audit Log ────────────────────────────────────────
 const AUDIT_KEY = 'baps_audit_log';
@@ -9187,7 +10252,8 @@ function renderStoriesList() {
     const coverHtml = cover
       ? `<div style="height:160px;background:url('${cover}') center/cover var(--maroon-dark);" onerror="this.style.background='var(--maroon-dark)'"></div>`
       : `<div style="height:160px;background:var(--maroon-dark);display:flex;align-items:center;justify-content:center;color:var(--gold-dim);font-size:36px;">✦</div>`;
-    return `<div onclick="openThread('${t.id}')" style="border:1px solid var(--border-strong);border-radius:3px;background:var(--cream);overflow:hidden;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 14px rgba(0,0,0,0.2)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+    return `<div onclick="openThread('${t.id}')" style="position:relative;border:1px solid var(--border-strong);border-radius:3px;background:var(--cream);overflow:hidden;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 4px 14px rgba(0,0,0,0.2)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+      ${visibleEvs.length ? `<span class="story-play-chip" onclick="event.stopPropagation();startStory('${t.id}')">▶ Play Story</span>` : ''}
       ${coverHtml}
       <div style="padding:14px;">
         <div style="font-family:'Cinzel',serif;color:var(--maroon-deep);font-size:15px;font-weight:600;margin-bottom:4px;">${(t.title || '').replace(/</g,'&lt;')}</div>
@@ -9220,6 +10286,7 @@ function renderThreadDetail(id) {
   detail.innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
       <button class="save-btn" style="background:transparent;color:var(--gold-light);border:1px solid var(--gold-dim);" onclick="renderStoriesList()">← All stories</button>
+      <button class="save-btn" style="background:linear-gradient(135deg,var(--gold-dim),var(--gold));color:var(--maroon-deep);" onclick="startStory('${t.id}')">▶ Play as Story</button>
       <button class="save-btn" style="background:linear-gradient(135deg,var(--gold-dim),var(--gold));color:var(--maroon-deep);" onclick="shareThread('${t.id}')">🔗 Share this thread</button>
       <span id="thread-share-msg" style="font-size:12px;color:#0a7;"></span>
     </div>

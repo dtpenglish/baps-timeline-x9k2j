@@ -55,7 +55,9 @@ function isPhoto(url) {
   return /\/photos\/.+\.(jpg|jpeg|png|webp|gif)$/i.test(url.pathname);
 }
 function isEventsJson(url) {
-  return url.pathname.endsWith('/events.json') || url.pathname === 'events.json';
+  // events.json plus lazy data layers (e.g. events-vicharan.json) —
+  // all are live data: network-first, cached per-path for offline.
+  return /\/?events(-[a-z0-9]+)?\.json$/i.test(url.pathname);
 }
 function isLargeMedia(url) {
   // R2-hosted media: don't intercept, let browser handle.
@@ -80,11 +82,12 @@ self.addEventListener('fetch', evt => {
   if (isEventsJson(url)) {
     evt.respondWith(
       fetch(req).then(resp => {
-        // Stash a copy for offline use.
+        // Stash a copy for offline use, keyed by path so each data
+        // layer caches independently.
         const copy = resp.clone();
-        caches.open(DATA_CACHE).then(c => c.put('events.json', copy));
+        caches.open(DATA_CACHE).then(c => c.put(url.pathname, copy));
         return resp;
-      }).catch(() => caches.open(DATA_CACHE).then(c => c.match('events.json')))
+      }).catch(() => caches.open(DATA_CACHE).then(c => c.match(url.pathname)))
     );
     return;
   }
